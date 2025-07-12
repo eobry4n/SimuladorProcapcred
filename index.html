@@ -48,58 +48,6 @@
         />
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Tipo de Operação</label>
-        <div class="radio-group">
-          <input type="radio" id="operacao-indireta" name="tipoOperacao" value="indireta" checked onchange="toggleFatorAgente()">
-          <label for="operacao-indireta">Indireta</label>
-          <input type="radio" id="operacao-direta" name="tipoOperacao" value="direta" onchange="toggleFatorAgente()">
-          <label for="operacao-direta">Direta</label>
-        </div>
-      </div>
-
-      <button class="advanced-options-btn" onclick="toggleAdvancedOptions()">
-        ⚙️ Opções Avançadas
-      </button>
-
-      <div id="advanced-options-group" style="display: none;">
-        <div class="form-group">
-          <label for="fator-custo" class="form-label">Fator Custo</label>
-          <input 
-            type="number" 
-            id="fator-custo" 
-            class="form-input" 
-            step="0.001"
-            value="1.07"
-            title="Fator que reflete o custo de captação do BNDES."
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="fator-taxa-bndes" class="form-label">Fator Taxa BNDES</label>
-          <input 
-            type="number" 
-            id="fator-taxa-bndes" 
-            class="form-input" 
-            step="0.001"
-            value="1.015"
-            title="Fator que inclui a remuneração do BNDES e a taxa de risco de crédito."
-          />
-        </div>
-
-        <div class="form-group" id="fator-agente-group">
-          <label for="fator-taxa-agente" class="form-label">Fator Taxa do Agente</label>
-          <input 
-            type="number" 
-            id="fator-taxa-agente" 
-            class="form-input" 
-            step="0.001"
-            value="1.03"
-            title="Fator referente à taxa de intermediação financeira do agente."
-          />
-        </div>
-      </div>
-
       <button class="simulate-btn" onclick="calcularSimulacao()" title="Clique para calcular a sua simulação financeira.">
         🚀 Calcular Simulação
       </button>
