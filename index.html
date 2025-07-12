@@ -14,7 +14,7 @@
     <!-- === CABEÇALHO === -->
     <header class="header">
       <div class="logo">
-        <img src="https://iili.io/FG82yRs.png" alt="Logo Sicoob" onerror="this.onerror=null;this.src='https://iili.io/FG82yRs.png';"/>
+        <img src="https://placehold.co/180x80/E0E6ED/2D3748?text=Logo" alt="Logo Sicoob" onerror="this.onerror=null;this.src='https://placehold.co/180x80/E0E6ED/2D3748?text=Logo';"/>
       </div>
       <h1 class="title">💰 Simulador Procapcred</h1>
       <p class="subtitle">Descubra se vale a pena investir no capital social enquanto paga seu empréstimo</p>
@@ -45,6 +45,52 @@
           min="3"
           max="120"
           title="Defina o número de meses para pagar o financiamento (mínimo 3, máximo 120)."
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Tipo de Operação</label>
+        <div class="radio-group">
+          <input type="radio" id="operacao-indireta" name="tipoOperacao" value="indireta" checked onchange="toggleFatorAgente()">
+          <label for="operacao-indireta">Indireta</label>
+          <input type="radio" id="operacao-direta" name="tipoOperacao" value="direta" onchange="toggleFatorAgente()">
+          <label for="operacao-direta">Direta</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="fator-custo" class="form-label">Fator Custo</label>
+        <input 
+          type="number" 
+          id="fator-custo" 
+          class="form-input" 
+          step="0.001"
+          value="1.07"
+          title="Fator que reflete o custo de captação do BNDES."
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="fator-taxa-bndes" class="form-label">Fator Taxa BNDES</label>
+        <input 
+          type="number" 
+          id="fator-taxa-bndes" 
+          class="form-input" 
+          step="0.001"
+          value="1.015"
+          title="Fator que inclui a remuneração do BNDES e a taxa de risco de crédito."
+        />
+      </div>
+
+      <div class="form-group" id="fator-agente-group">
+        <label for="fator-taxa-agente" class="form-label">Fator Taxa do Agente</label>
+        <input 
+          type="number" 
+          id="fator-taxa-agente" 
+          class="form-input" 
+          step="0.001"
+          value="1.03"
+          title="Fator referente à taxa de intermediação financeira do agente."
         />
       </div>
 
@@ -115,7 +161,7 @@
 
     <!-- === AÇÕES === -->
     <section class="actions-section">
-      <a href="https://wa.me/5564992247053" class="whatsapp-btn" target="_blank" title="Fale com um gerente via WhatsApp para mais informações.">
+      <a href="https://wa.me/5562999999999" class="whatsapp-btn" target="_blank" title="Fale com um gerente via WhatsApp para mais informações.">
         📱 Falar com Gerente no WhatsApp
       </a>
       <div class="share-buttons">
@@ -140,5 +186,4 @@
   <!-- Link para o ficheiro JavaScript externo -->
   <script src="script.js"></script>
 </body>
-
 </html>
