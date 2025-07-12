@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💰 Simulador Procapcred Inteligente</title>
+  <!-- Link para o ficheiro CSS externo -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Font Awesome para ícones -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <!-- === CABEÇALHO === -->
+    <header class="header">
+      <div class="logo">
+        <img src="https://placehold.co/180x80/E0E6ED/2D3748?text=Logo" alt="Logo Sicoob" onerror="this.onerror=null;this.src='https://placehold.co/180x80/E0E6ED/2D3748?text=Logo';"/>
+      </div>
+      <h1 class="title">💰 Simulador Procapcred</h1>
+      <p class="subtitle">Descubra se vale a pena investir no capital social enquanto paga seu empréstimo</p>
+    </header>
+
+    <!-- === FORMULÁRIO === -->
+    <section class="form-section">
+      <div class="form-group">
+        <label for="valor" class="form-label">💵 Valor que você quer financiar</label>
+        <input 
+          type="text" 
+          id="valor" 
+          class="form-input" 
+          placeholder="Ex: 50.000"
+          oninput="formatInputAsNumber(this)" 
+          onblur="formatInputAsCurrency(this)"
+          title="Insira o valor desejado para financiamento. Será formatado como moeda ao sair do campo."
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="meses" class="form-label">📅 Em quantos meses quer pagar?</label>
+        <input 
+          type="number" 
+          id="meses" 
+          class="form-input" 
+          placeholder="Ex: 24"
+          min="3"
+          max="120"
+          title="Defina o número de meses para pagar o financiamento (mínimo 3, máximo 120)."
+        />
+      </div>
+
+      <button class="simulate-btn" onclick="calcularSimulacao()" title="Clique para calcular a sua simulação financeira.">
+        🚀 Calcular Simulação
+      </button>
+    </section>
+
+    <!-- === RESULTADOS === -->
+    <section class="results-section" id="resultados">
+      <!-- Resultado principal -->
+      <div class="result-card" id="resultado-principal">
+        <div class="result-title">
+          <span id="resultado-icon">🎯</span>
+          <span id="resultado-titulo">Resultado da Análise</span>
+        </div>
+        <div class="result-value" id="resultado-valor">R$ 0,00</div>
+        <div class="result-description" id="resultado-descricao">
+          Calculando...
+        </div>
+      </div>
+
+      <!-- Comparativo visual -->
+      <div class="comparison-grid" id="comparativo">
+        <!-- Cards serão inseridos aqui pelo JavaScript -->
+      </div>
+
+      <!-- Resumo Comparativo -->
+      <div class="summary-section" id="summary-comparison">
+        <!-- O resumo será inserido aqui pelo JavaScript -->
+      </div>
+
+      <!-- Gráfico -->
+      <div class="chart-container" id="grafico-container" style="display: none;">
+        <h3 class="chart-title">📊 Comparativo Visual</h3>
+        <canvas id="grafico" width="400" height="200"></canvas>
+      </div>
+
+      <!-- Gráfico de Amortização -->
+      <div class="chart-container" id="amortizacao-chart-container" style="display: none;">
+        <h3 class="chart-title">📈 Plano de Amortização (Juros vs. Amortização)</h3>
+        <canvas id="grafico-amortizacao" width="400" height="200"></canvas>
+      </div>
+
+      <!-- Informações das parcelas -->
+      <div class="installments-section" id="parcelamento">
+        <h3 class="installments-title">
+          💳 Detalhes do Financiamento
+        </h3>
+        <div class="installments-table-container">
+          <table class="installments-table">
+            <thead>
+              <tr>
+                <th>Parcela</th>
+                <th>Valor da Parcela</th>
+                <th>Juros</th>
+                <th>Amortização</th>
+                <th>Saldo Devedor</th>
+              </tr>
+            </thead>
+            <tbody id="parcelas-grid">
+              <!-- Dados das parcelas serão inseridos aqui -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- === AÇÕES === -->
+    <section class="actions-section">
+      <a href="https://wa.me/5562999999999" class="whatsapp-btn" target="_blank" title="Fale com um gerente via WhatsApp para mais informações.">
+        📱 Falar com Gerente no WhatsApp
+      </a>
+      <div class="share-buttons">
+        <a href="#" id="share-whatsapp" class="share-btn whatsapp" title="Partilhar os resultados no WhatsApp.">
+          <i class="fab fa-whatsapp"></i> Partilhar no WhatsApp
+        </a>
+        <a href="#" id="share-email" class="share-btn email" title="Partilhar os resultados por e-mail.">
+          <i class="fas fa-envelope"></i> Partilhar por E-mail
+        </a>
+      </div>
+    </section>
+
+    <!-- === RODAPÉ === -->
+    <footer class="footer">
+      <p>🏦 Desenvolvido por <strong>Inteligência Competitiva - Sicoob Unicidades</strong></p>
+      <p>💡 Simulação baseada em dados reais da taxa SELIC</p>
+    </footer>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Link para o ficheiro JavaScript externo -->
+  <script src="script.js"></script>
+</body>
+</html>
