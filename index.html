@@ -4,17 +4,502 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>💰 Simulador Procapcred Inteligente</title>
-  <!-- Link para o ficheiro CSS externo -->
-  <link rel="stylesheet" href="style.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    /* === CABEÇALHO === */
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .logo img {
+      height: 80px;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    }
+
+    .title {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 15px;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: #666;
+      max-width: 600px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    /* === FORMULÁRIO === */
+    .form-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #333;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 18px 24px;
+      border: 2px solid #e1e5e9;
+      border-radius: 16px;
+      font-size: 1.1rem;
+      transition: all 0.3s ease;
+      background: white;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      transform: translateY(-1px);
+    }
+
+    .simulate-btn {
+      width: 100%;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 1.3rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .simulate-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+    }
+
+    .simulate-btn:active {
+      transform: translateY(0);
+    }
+
+    /* === RESULTADOS === */
+    .results-section {
+      display: none;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .result-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 30px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .result-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .result-value {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 15px;
+    }
+
+    .result-description {
+      font-size: 1.1rem;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .comparison-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+
+    .comparison-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .comparison-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+      color: #333;
+    }
+
+    .comparison-card .value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+
+    .comparison-card .description {
+      font-size: 0.9rem;
+      color: #666;
+    }
+
+    .summary-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .chart-container {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .chart-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 30px;
+      text-align: center;
+      color: #333;
+    }
+
+    .installments-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .installments-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 30px;
+      text-align: center;
+      color: #333;
+    }
+
+    .installments-table-container {
+      overflow-x: auto;
+      border-radius: 16px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .installments-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .installments-table th {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 20px 15px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .installments-table td {
+      padding: 18px 15px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 0.95rem;
+    }
+
+    .installments-table tr:hover {
+      background-color: rgba(102, 126, 234, 0.05);
+    }
+
+    .installments-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* === AÇÕES === */
+    .actions-section {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .whatsapp-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #25d366, #128c7e);
+      color: white;
+      padding: 18px 40px;
+      text-decoration: none;
+      border-radius: 50px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 24px rgba(37, 211, 102, 0.3);
+    }
+
+    .whatsapp-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(37, 211, 102, 0.4);
+    }
+
+    .share-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .share-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 50px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      color: white;
+    }
+
+    .share-btn.whatsapp {
+      background: linear-gradient(135deg, #25d366, #128c7e);
+    }
+
+    .share-btn.email {
+      background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    }
+
+    .share-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    /* === RODAPÉ === */
+    .footer {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .footer p {
+      margin-bottom: 10px;
+      color: #666;
+    }
+
+    .footer strong {
+      color: #333;
+    }
+
+    /* === RESPONSIVIDADE === */
+    @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+
+      .header {
+        padding: 30px 20px;
+      }
+
+      .title {
+        font-size: 2rem;
+      }
+
+      .subtitle {
+        font-size: 1rem;
+      }
+
+      .form-section {
+        padding: 30px 20px;
+      }
+
+      .result-card {
+        padding: 30px 20px;
+      }
+
+      .result-value {
+        font-size: 2rem;
+      }
+
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chart-container {
+        padding: 30px 20px;
+      }
+
+      .installments-section {
+        padding: 30px 20px;
+      }
+
+      .installments-table th,
+      .installments-table td {
+        padding: 12px 10px;
+        font-size: 0.85rem;
+      }
+
+      .share-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .share-btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+    }
+
+    /* === ANIMAÇÕES === */
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* === LOADING === */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
   <!-- Font Awesome para ícones -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="container">
     <!-- === CABEÇALHO === -->
     <header class="header">
       <div class="logo">
-        <img src="https://placehold.co/180x80/E0E6ED/2D3748?text=Logo" alt="Logo Sicoob" onerror="this.onerror=null;this.src='https://placehold.co/180x80/E0E6ED/2D3748?text=Logo';"/>
+        <img src="https://placehold.co/180x80/667eea/ffffff?text=SICOOB" alt="Logo Sicoob" onerror="this.onerror=null;this.src='https://placehold.co/180x80/667eea/ffffff?text=SICOOB';"/>
       </div>
       <h1 class="title">💰 Simulador Procapcred</h1>
       <p class="subtitle">Descubra se vale a pena investir no capital social enquanto paga seu empréstimo</p>
@@ -137,7 +622,78 @@
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Link para o ficheiro JavaScript externo -->
-  <script src="script.js"></script>
+  <script>
+    // Placeholder para funções JavaScript
+    function formatInputAsNumber(input) {
+      // Remove tudo exceto dígitos
+      input.value = input.value.replace(/\D/g, '');
+    }
+
+    function formatInputAsCurrency(input) {
+      // Formata como moeda quando sair do campo
+      if (input.value) {
+        const value = parseFloat(input.value);
+        if (!isNaN(value)) {
+          input.value = value.toLocaleString('pt-BR');
+        }
+      }
+    }
+
+    function calcularSimulacao() {
+      const valor = document.getElementById('valor').value;
+      const meses = document.getElementById('meses').value;
+      
+      if (!valor || !meses) {
+        alert('Por favor, preencha todos os campos');
+        return;
+      }
+
+      // Simula carregamento
+      const btn = document.querySelector('.simulate-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="loading"></span> Calculando...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        // Restaura o botão
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        // Mostra resultados
+        document.getElementById('resultados').style.display = 'block';
+        document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' });
+        
+        // Exemplo de resultado
+        document.getElementById('resultado-valor').textContent = 'R$ 1.250,00';
+        document.getElementById('resultado-descricao').textContent = 'Valor da parcela mensal calculado com base nos parâmetros informados.';
+        
+        // Adiciona animação
+        document.getElementById('resultado-principal').classList.add('fade-in');
+      }, 2000);
+    }
+
+    // Adiciona efeitos de hover e interatividade
+    document.addEventListener('DOMContentLoaded', function() {
+      // Adiciona efeito de foco nos inputs
+      const inputs = document.querySelectorAll('.form-input');
+      inputs.forEach(input => {
+        input.addEventListener('focus', function() {
+          this.parentElement.classList.add('focused');
+        });
+        
+        input.addEventListener('blur', function() {
+          this.parentElement.classList.remove('focused');
+        });
+      });
+
+      // Adiciona animação de entrada
+      const sections = document.querySelectorAll('section');
+      sections.forEach((section, index) => {
+        setTimeout(() => {
+          section.classList.add('fade-in');
+        }, index * 200);
+      });
+    });
+  </script>
 </body>
 </html>
