@@ -1,8 +1,6 @@
 // === CONFIGURAÇÕES E CONSTANTES ===
 const CONFIGURACOES = {
-  // Taxa anual do Procapcred. Revertida para 11% a.a. conforme dúvida do utilizador.
-  // O CET será calculado com base nesta taxa nominal e nos custos adicionais.
-  TAXA_PROCAPCRED_ANUAL: 0.11, // 11% ao ano
+  // A TAXA_PROCAPCRED_ANUAL agora será calculada dinamicamente.
   
   // Taxa da poupança (aproximadamente 0,5% ao mês)
   TAXA_POUPANCA_MENSAL: 0.005,
@@ -101,6 +99,62 @@ async function buscarTaxaSelic() {
 }
 
 // === CÁLCULOS FINANCEIROS ===
+
+/**
+ * Calcula a taxa de juros final com base no tipo de operação e nos fatores.
+ * @param {string} tipoOperacao - 'direta' ou 'indireta'.
+ * @param {number} custoFinanceiro - Custo Financeiro em porcentagem (ex: 7 para 7%).
+ * @param {number} taxaBndes - Taxa do BNDES em porcentagem (ex: 1.5 para 1.5%).
+ * @param {number} taxaAgente - Taxa do Agente Financeiro em porcentagem (ex: 3 para 3%).
+ * @returns {number} Taxa de juros anual em formato decimal (ex: 0.1186).
+ */
+function calcularTaxaJurosFinal(tipoOperacao, custoFinanceiro, taxaBndes, taxaAgente) {
+  const fatorCusto = 1 + (custoFinanceiro / 100);
+  const fatorTaxaBndes = 1 + (taxaBndes / 100);
+  
+  let taxaJurosAnual;
+
+  if (tipoOperacao === 'indireta') {
+    const fatorTaxaAgente = 1 + (taxaAgente / 100);
+    taxaJurosAnual = (fatorCusto * fatorTaxaBndes * fatorTaxaAgente) - 1;
+  } else { // tipoOperacao === 'direta'
+    taxaJurosAnual = (fatorCusto * fatorTaxaBndes) - 1;
+  }
+  return taxaJurosAnual;
+}
+
+/**
+ * Controla a visibilidade do campo "Taxa do Agente Financeiro"
+ * com base na seleção do tipo de operação.
+ */
+function toggleAgentRate() {
+  const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
+  const agentRateGroup = document.getElementById('agentRateGroup');
+  if (tipoOperacao === 'direta') {
+    agentRateGroup.style.display = 'none';
+    // Define um valor padrão para a taxa do agente quando não é aplicável
+    document.getElementById('taxaAgente').value = '0'; 
+  } else {
+    agentRateGroup.style.display = 'block';
+    // Opcional: restabelecer o valor padrão se o campo estava vazio antes de ser oculto
+    if (document.getElementById('taxaAgente').value === '0') {
+      document.getElementById('taxaAgente').value = '3'; 
+    }
+  }
+}
+
+/**
+ * Alterna a visibilidade da seção de configurações avançadas.
+ */
+function toggleAdvancedSettings() {
+  const advancedSettingsDiv = document.getElementById('advancedSettings');
+  if (advancedSettingsDiv.style.display === 'none') {
+    advancedSettingsDiv.style.display = 'block';
+  } else {
+    advancedSettingsDiv.style.display = 'none';
+  }
+}
+
 /**
  * Calcula os juros compostos para investimentos
  * Fórmula: Montante = Capital × (1 + taxa)^tempo
@@ -214,18 +268,26 @@ async function calcularSimulacao() {
   
   const mesesFinanciamento = parseInt(document.getElementById("meses").value);
 
-  if (isNaN(valorFinanciado) || isNaN(mesesFinanciamento) || valorFinanciado <= 0 || mesesFinanciamento <= 0) {
+  // Obter parâmetros para o cálculo da taxa de juros (mesmo se ocultos, terão seus valores padrão)
+  const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
+  const custoFinanceiro = parseFloat(document.getElementById("custoFinanceiro").value);
+  const taxaBndes = parseFloat(document.getElementById("taxaBndes").value);
+  const taxaAgente = parseFloat(document.getElementById("taxaAgente").value); // Já tratada para ser 0 se direta em toggleAgentRate()
+
+  if (isNaN(valorFinanciado) || isNaN(mesesFinanciamento) || valorFinanciado <= 0 || mesesFinanciamento <= 0 ||
+      isNaN(custoFinanceiro) || isNaN(taxaBndes) || isNaN(taxaAgente)) {
     // Usando um modal simples em vez de alert para melhor UX
-    mostrarMensagem('⚠️ Por favor, preencha todos os campos com valores válidos!', 'warning');
+    mostrarMensagem('⚠️ Por favor, preencha todos os campos com valores válidos para simulação e parâmetros de taxa!', 'warning');
     return;
   }
 
   // === 2. BUSCAR TAXA SELIC ATUAL ===
   await buscarTaxaSelic();
 
-  // === 3. CALCULAR TAXAS MENSAIS ===
+  // === 3. CALCULAR TAXA DE JUROS ANUAL DINÂMICA ===
+  const taxaProcapcredAnual = calcularTaxaJurosFinal(tipoOperacao, custoFinanceiro, taxaBndes, taxaAgente);
   // Converter taxa anual do Procapcred para mensal (taxa equivalente)
-  const taxaProcapcredMensal = Math.pow(1 + CONFIGURACOES.TAXA_PROCAPCRED_ANUAL, 1/12) - 1;
+  const taxaProcapcredMensal = Math.pow(1 + taxaProcapcredAnual, 1/12) - 1;
   
   // === 4. CALCULAR PARCELAS E CUSTOS ===
   const parcelaMensal = calcularParcelaMensal(valorFinanciado, taxaProcapcredMensal, mesesFinanciamento);
@@ -633,5 +695,8 @@ function mostrarMensagem(mensagem, tipo = 'info') {
   }, 3000);
 }
 
-// Inicializa a busca pela SELIC ao carregar a página
-document.addEventListener('DOMContentLoaded', buscarTaxaSelic);
+// Inicializa a busca pela SELIC ao carregar a página e ajusta a visibilidade
+document.addEventListener('DOMContentLoaded', () => {
+  buscarTaxaSelic();
+  toggleAgentRate(); // Garante o estado correto ao carregar a página
+});
