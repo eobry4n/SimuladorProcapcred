@@ -197,9 +197,23 @@ function calcularRemuneracaoCapitalSocial(capitalSocial, taxaSelicAnual, prazoMe
  */
 function calcularTaxaJurosOperacao() {
     const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
-    const fatorCusto = parseFloat(document.getElementById('fator-custo').value);
-    const fatorTaxaBNDES = parseFloat(document.getElementById('fator-taxa-bndes').value);
-    const fatorTaxaAgente = parseFloat(document.getElementById('fator-taxa-agente').value);
+    const fatorCustoInput = document.getElementById('fator-custo');
+    const fatorTaxaBNDESInput = document.getElementById('fator-taxa-bndes');
+    const fatorTaxaAgenteInput = document.getElementById('fator-taxa-agente');
+
+    let fatorCusto, fatorTaxaBNDES, fatorTaxaAgente;
+
+    // Se as opções avançadas estiverem visíveis, use os valores dos inputs.
+    // Caso contrário, use os valores padrão definidos em CONFIGURACOES.FATORES_JUROS.
+    if (document.getElementById('advanced-options-group').style.display === 'block') {
+        fatorCusto = parseFloat(fatorCustoInput.value);
+        fatorTaxaBNDES = parseFloat(fatorTaxaBNDESInput.value);
+        fatorTaxaAgente = parseFloat(fatorTaxaAgenteInput.value);
+    } else {
+        fatorCusto = CONFIGURACOES.FATORES_JUROS[tipoOperacao].fatorCusto;
+        fatorTaxaBNDES = CONFIGURACOES.FATORES_JUROS[tipoOperacao].fatorTaxaBNDES;
+        fatorTaxaAgente = CONFIGURACOES.FATORES_JUROS.indireta.fatorTaxaAgente; // Padrão para indireta se oculta
+    }
 
     let taxaJurosAnual = 0;
 
@@ -247,9 +261,26 @@ function toggleFatorAgente() {
     document.getElementById('fator-taxa-bndes').value = CONFIGURACOES.FATORES_JUROS[tipoOperacao].fatorTaxaBNDES;
 }
 
+/**
+ * Alterna a visibilidade do grupo de opções avançadas.
+ */
+function toggleAdvancedOptions() {
+    const advancedOptionsGroup = document.getElementById('advanced-options-group');
+    if (advancedOptionsGroup.style.display === 'none') {
+        advancedOptionsGroup.style.display = 'block';
+    } else {
+        advancedOptionsGroup.style.display = 'none';
+        // Quando oculta, redefina os valores dos fatores para os padrões do tipo de operação atual
+        // e desative o campo do agente se a operação for direta.
+        toggleFatorAgente(); 
+    }
+}
+
 
 // === FUNÇÃO PRINCIPAL DE SIMULAÇÃO ===
 async function calcularSimulacao() {
+  console.log('Iniciando cálculo da simulação...');
+
   // === 1. VALIDAR DADOS DE ENTRADA ===
   // Obter o valor do input e remover a formatação de moeda para cálculo
   const valorInput = document.getElementById("valor").value;
@@ -257,51 +288,69 @@ async function calcularSimulacao() {
   
   const mesesFinanciamento = parseInt(document.getElementById("meses").value);
 
-  if (isNaN(valorFinanciado) || isNaN(mesesFinanciamento) || valorFinanciado <= 0 || mesesFinanciamento <= 0) {
-    // Usando um modal simples em vez de alert para melhor UX
-    mostrarMensagem('⚠️ Por favor, preencha todos os campos com valores válidos!', 'warning');
+  if (isNaN(valorFinanciado) || valorFinanciado <= 0) {
+    mostrarMensagem('⚠️ Por favor, preencha o campo "Valor que você quer financiar" com um valor válido!', 'warning');
+    console.error('Erro de validação: Valor financiado inválido.');
+    return;
+  }
+
+  if (isNaN(mesesFinanciamento) || mesesFinanciamento <= 0) {
+    mostrarMensagem('⚠️ Por favor, preencha o campo "Em quantos meses quer pagar?" com um valor válido!', 'warning');
+    console.error('Erro de validação: Meses de financiamento inválidos.');
     return;
   }
 
   // === 2. CALCULAR A TAXA DE JUROS DA OPERAÇÃO (BNDES) ===
   const taxaProcapcredAnual = calcularTaxaJurosOperacao();
-  if (taxaProcapcredAnual === null) { // Se houver erro nos fatores de custo
+  if (taxaProcapcredAnual === null) { // Se houver erro nos fatores de custo (já tratado em calcularTaxaJurosOperacao)
+      console.error('Erro ao calcular a taxa de juros da operação.');
       return;
   }
+  console.log('Taxa Procapcred Anual calculada:', taxaProcapcredAnual);
+
 
   // === 3. BUSCAR TAXA SELIC ATUAL ===
   await buscarTaxaSelic();
+  console.log('Taxa SELIC atual:', taxaSelicAtual);
 
   // === 4. CALCULAR TAXAS MENSAIS ===
   // Converter taxa anual do Procapcred para mensal (taxa equivalente)
   const taxaProcapcredMensal = Math.pow(1 + taxaProcapcredAnual, 1/12) - 1;
+  console.log('Taxa Procapcred Mensal:', taxaProcapcredMensal);
   
   // === 5. CALCULAR PARCELAS E CUSTOS ===
   const parcelaMensal = calcularParcelaMensal(valorFinanciado, taxaProcapcredMensal, mesesFinanciamento);
   const totalParcelasPagas = parcelaMensal * mesesFinanciamento;
+  console.log('Parcela Mensal:', parcelaMensal);
   
   // Calcular IOF e Seguro
   const iof = calcularIOF(valorFinanciado, mesesFinanciamento);
   const seguro = calcularSeguro(valorFinanciado, mesesFinanciamento);
+  console.log('IOF:', iof, 'Seguro:', seguro);
   
   // Calcular CET
   const dadosCET = calcularCET(valorFinanciado, parcelaMensal, mesesFinanciamento, iof, seguro);
+  console.log('Dados CET:', dadosCET);
 
   // === 6. CALCULAR REMUNERAÇÃO DO CAPITAL SOCIAL ===
   // Assumindo que o capital social é igual ao valor financiado para a simulação
   const capitalSocial = valorFinanciado; 
   const remuneracaoCapitalSocial = calcularRemuneracaoCapitalSocial(capitalSocial, taxaSelicAtual, mesesFinanciamento);
+  console.log('Remuneração Capital Social:', remuneracaoCapitalSocial);
 
   // === 7. CALCULAR INVESTIMENTO ALTERNATIVO (POUPANÇA) ===
   const montantePoupanca = calcularJurosCompostos(valorFinanciado, CONFIGURACOES.TAXA_POUPANCA_MENSAL, mesesFinanciamento);
   const rendimentoPoupanca = montantePoupanca - valorFinanciado;
+  console.log('Rendimento Poupança:', rendimentoPoupanca);
 
   // === 8. CALCULAR RESULTADO LÍQUIDO ===
   // Remuneração do capital social menos o custo total do empréstimo (juros + IOF + seguros)
   const resultadoLiquido = remuneracaoCapitalSocial - dadosCET.custoTotal;
+  console.log('Resultado Líquido:', resultadoLiquido);
 
   // === 9. GERAR PLANO DE AMORTIZAÇÃO ===
   const planoAmortizacao = gerarPlanoAmortizacao(valorFinanciado, taxaProcapcredMensal, mesesFinanciamento, parcelaMensal);
+  console.log('Plano de Amortização gerado.');
 
   // === 10. EXIBIR RESULTADOS ===
   exibirResultados({ 
@@ -322,6 +371,7 @@ async function calcularSimulacao() {
     valorTotalPago: dadosCET.valorTotalPago, // Valor total pago pelo cliente
     planoAmortizacao
   });
+  console.log('Simulação concluída e resultados exibidos.');
 }
 
 // === EXIBIÇÃO DE RESULTADOS ===
@@ -521,7 +571,7 @@ function exibirGraficoAmortizacao(planoAmortizacao) {
     const amortizacaoChartContainer = document.getElementById("amortizacao-chart-container");
     const canvas = document.getElementById("grafico-amortizacao");
     
-    amortizacaoChartContainer.style.display = "block";
+    amortizacaoChartContainer.style.display = 'block'; // Certifique-se de que o container está visível
 
     // Destruir gráfico anterior se existir
     if (window.meuGraficoAmortizacao) {

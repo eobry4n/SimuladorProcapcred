@@ -139,6 +139,27 @@ body {
   background-color: #cbd5e0;
 }
 
+/* Estilo para o botão de opções avançadas */
+.advanced-options-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4a5568; /* Cinza escuro */
+  color: white;
+  font-size: 1em;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 25px; /* Espaçamento abaixo do botão */
+}
+
+.advanced-options-btn:hover {
+  background-color: #2d3748; /* Cinza mais escuro no hover */
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
 
 /* === RESULTADOS === */
 .results-section {
