@@ -1,259 +1,118 @@
 // === CONFIGURAÇÕES E CONSTANTES ===
 const CONFIGURACOES = {
-  // A TAXA_PROCAPCRED_ANUAL agora será calculada dinamicamente.
-  
-  // Taxa da poupança (aproximadamente 0,5% ao mês)
   TAXA_POUPANCA_MENSAL: 0.005,
-  
-  // URL da API do Banco Central para buscar a SELIC
   API_SELIC: "https://api.bcb.gov.br/dados/serie/bcdata.sgs.4189/dados/ultimos/1?formato=json",
+  SELIC_PADRAO: 10.5,
   
-  // Taxa SELIC padrão caso a API não funcione
-  SELIC_PADRAO: 10.5, // Em porcentagem, ex: 10.5 para 10.5%
+  IOF: {
+    ADICIONAL: 0.0038,
+    PF_TAXA_DIARIA: 0.000082, // Taxa para Pessoa Física
+    PJ_TAXA_DIARIA: 0.000041  // Taxa para Pessoa Jurídica
+  },
   
-  // Taxa de IOF (0,0041% ao dia nos primeiros 30 dias + 0,38% adicional)
-  IOF_TAXA_DIARIA: 0.000041, // 0.0041%
-  IOF_ADICIONAL: 0.0038,     // 0.38%
-  
-  // Taxa de seguro: 0,066% do valor da operação * o prazo
-  SEGURO_TAXA_PROPORCIONAL: 0.00066 // 0.066%
+  SEGURO_TAXA_PROPORCIONAL: 0
 };
 
 // === UTILITÁRIOS ===
-/**
- * Formata um número para moeda brasileira
- * Exemplo: 1500.50 → "R$ 1.500,50"
- */
-const formatarMoeda = (valor) => {
-  return valor.toLocaleString('pt-BR', { 
-    style: 'currency', 
-    currency: 'BRL' 
-  });
-};
-
-/**
- * Formata um número para porcentagem
- * Exemplo: 0.115 → "11,50%"
- */
+const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatarPorcentagem = (valor) => {
+  if (isNaN(valor) || !isFinite(valor)) return 'Inválido';
   return (valor * 100).toFixed(2).replace('.', ',') + '%';
 };
 
-// === Funções para formatação do input de valor ===
-/**
- * Formata o valor do input para permitir apenas números e um separador decimal.
- * Converte vírgula para ponto para facilitar o parseFloat.
- */
+// === FUNÇÕES DE INPUT ===
 function formatInputAsNumber(input) {
-    let value = input.value;
-    // Remove tudo que não for dígito, vírgula ou ponto
-    value = value.replace(/[^0-9.,]/g, '');
-    // Permite apenas uma vírgula ou ponto como separador decimal
-    const parts = value.split(/[.,]/);
-    if (parts.length > 2) {
-        value = parts[0] + '.' + parts.slice(1).join('');
-    } else if (parts.length === 2 && value.includes(',')) {
-        value = parts[0] + '.' + parts[1];
-    }
-    input.value = value;
+  let value = input.value.replace(/[^0-9.,]/g, '');
+  const parts = value.split(/[.,]/);
+  if (parts.length > 2) value = parts[0] + '.' + parts.slice(1).join('');
+  else if (parts.length === 2 && value.includes(',')) value = parts[0] + '.' + parts[1];
+  input.value = value;
 }
 
-/**
- * Formata o valor do input para o formato de moeda brasileira ao perder o foco.
- */
 function formatInputAsCurrency(input) {
-    let value = input.value.replace(/[R$\s.]/g, '').replace(',', '.'); // Limpa e converte para ponto decimal
-    value = parseFloat(value);
-    if (!isNaN(value)) {
-        input.value = formatarMoeda(value);
-    } else {
-        input.value = ''; // Limpa o campo se não for um número válido
-    }
+  let value = input.value.replace(/[R$\s.]/g, '').replace(',', '.');
+  value = parseFloat(value);
+  input.value = !isNaN(value) ? formatarMoeda(value) : '';
 }
 
-// === DADOS GLOBAIS ===
+// === DADOS GLOBAIS E API ===
 let taxaSelicAtual = CONFIGURACOES.SELIC_PADRAO;
+let tipoCliente = 'PJ'; // Estado inicial padrão
 
-// === FUNÇÕES DE BUSCA DE DADOS ===
-/**
- * Busca a taxa SELIC atual na API do Banco Central
- * Se não conseguir, usa a taxa padrão
- */
 async function buscarTaxaSelic() {
   try {
-    console.log('🔍 Buscando taxa SELIC atual...');
-    
     const resposta = await fetch(CONFIGURACOES.API_SELIC);
     const dados = await resposta.json();
-    
-    // Converte a taxa de formato brasileiro (com vírgula) para decimal
-    const taxaSelicAnual = parseFloat(dados[0].valor.replace(',', '.'));
-    
-    taxaSelicAtual = taxaSelicAnual;
-    console.log(`✅ Taxa SELIC encontrada: ${taxaSelicAnual}% ao ano`);
-    
+    taxaSelicAtual = parseFloat(dados[0].valor.replace(',', '.'));
   } catch (erro) {
     console.warn('⚠️ Erro ao buscar SELIC, usando taxa padrão:', erro);
-    taxaSelicAtual = CONFIGURACOES.SELIC_PADRAO;
   }
 }
 
 // === CÁLCULOS FINANCEIROS ===
-
-/**
- * Calcula a taxa de juros final com base no tipo de operação e nos fatores.
- * @param {string} tipoOperacao - 'direta' ou 'indireta'.
- * @param {number} custoFinanceiro - Custo Financeiro em porcentagem (ex: 7 para 7%).
- * @param {number} taxaBndes - Taxa do BNDES em porcentagem (ex: 1.5 para 1.5%).
- * @param {number} taxaAgente - Taxa do Agente Financeiro em porcentagem (ex: 3 para 3%).
- * @returns {number} Taxa de juros anual em formato decimal (ex: 0.1186).
- */
-function calcularTaxaJurosFinal(tipoOperacao, custoFinanceiro, taxaBndes, taxaAgente) {
-  const fatorCusto = 1 + (custoFinanceiro / 100);
-  const fatorTaxaBndes = 1 + (taxaBndes / 100);
-  
-  let taxaJurosAnual;
-
-  if (tipoOperacao === 'indireta') {
-    const fatorTaxaAgente = 1 + (taxaAgente / 100);
-    taxaJurosAnual = (fatorCusto * fatorTaxaBndes * fatorTaxaAgente) - 1;
-  } else { // tipoOperacao === 'direta'
-    taxaJurosAnual = (fatorCusto * fatorTaxaBndes) - 1;
+function calcularTaxaJurosFinal(tipo, custo, bndes, agente) {
+  const fatorCusto = 1 + (custo / 100);
+  const fatorBndes = 1 + (bndes / 100);
+  if (tipo === 'indireta') {
+    const fatorAgente = 1 + (agente / 100);
+    return (fatorCusto * fatorBndes * fatorAgente) - 1;
   }
-  return taxaJurosAnual;
+  return (fatorCusto * fatorBndes) - 1;
 }
 
-/**
- * Controla a visibilidade do campo "Taxa do Agente Financeiro"
- * com base na seleção do tipo de operação.
- */
-function toggleAgentRate() {
-  const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
-  const agentRateGroup = document.getElementById('agentRateGroup');
-  if (tipoOperacao === 'direta') {
-    agentRateGroup.style.display = 'none';
-    // Define um valor padrão para a taxa do agente quando não é aplicável
-    document.getElementById('taxaAgente').value = '0'; 
-  } else {
-    agentRateGroup.style.display = 'block';
-    // Opcional: restabelecer o valor padrão se o campo estava vazio antes de ser oculto
-    if (document.getElementById('taxaAgente').value === '0') {
-      document.getElementById('taxaAgente').value = '3'; 
-    }
-  }
-}
-
-/**
- * Alterna a visibilidade da seção de configurações avançadas.
- */
-function toggleAdvancedSettings() {
-  const advancedSettingsDiv = document.getElementById('advancedSettings');
-  if (advancedSettingsDiv.style.display === 'none') {
-    advancedSettingsDiv.style.display = 'block';
-  } else {
-    advancedSettingsDiv.style.display = 'none';
-  }
-}
-
-/**
- * Calcula os juros compostos para investimentos
- * Fórmula: Montante = Capital × (1 + taxa)^tempo
- */
-function calcularJurosCompostos(capital, taxaMensal, meses) {
-  return capital * Math.pow(1 + taxaMensal, meses);
-}
-
-/**
- * Calcula a parcela mensal de um financiamento (Sistema Price)
- * Fórmula: Parcela = ValorFinanciado * [TaxaMensal / (1 - (1 + TaxaMensal)^-Meses)]
- */
-function calcularParcelaMensal(valorFinanciado, taxaMensal, meses) {
-  if (taxaMensal === 0) return valorFinanciado / meses;
-  
-  const numerador = valorFinanciado * taxaMensal;
-  const denominador = 1 - Math.pow(1 + taxaMensal, -meses);
-  return numerador / denominador;
-}
-
-/**
- * Calcula o IOF sobre crédito
- * 0,0041% ao dia nos primeiros 30 dias + 0,38% adicional
- */
-function calcularIOF(valorOperacao, prazoMeses) {
-  const prazoDias = prazoMeses * 30; // Aproximação de 30 dias por mês
-  const diasIOF = Math.min(prazoDias, 365); // IOF diário limitado a 365 dias
-  
-  const iofDiario = valorOperacao * CONFIGURACOES.IOF_TAXA_DIARIA * diasIOF;
-  const iofAdicional = valorOperacao * CONFIGURACOES.IOF_ADICIONAL; 
-  
+function calcularIOF(valor, meses) {
+  const dias = Math.min(meses * 30, 365);
+  const taxaDiaria = (tipoCliente === 'PF') 
+    ? CONFIGURACOES.IOF.PF_TAXA_DIARIA 
+    : CONFIGURACOES.IOF.PJ_TAXA_DIARIA;
+  const iofDiario = valor * taxaDiaria * dias;
+  const iofAdicional = valor * CONFIGURACOES.IOF.ADICIONAL;
   return iofDiario + iofAdicional;
 }
 
-/**
- * Calcula o seguro da operação
- * Fórmula: valor da operação * 0,066% * o prazo
- */
-function calcularSeguro(valorOperacao, prazoMeses) {
-  // O seguro é 0.066% do valor da operação, multiplicado pelo prazo em meses
-  return valorOperacao * CONFIGURACOES.SEGURO_TAXA_PROPORCIONAL * prazoMeses;
+function calcularSeguro(valor, meses) {
+  return valor * CONFIGURACOES.SEGURO_TAXA_PROPORCIONAL * meses;
 }
 
-/**
- * Calcula o CET (Custo Efetivo Total)
- * Inclui juros, IOF e seguros.
- * Retorna o custo total e o CET anual aproximado.
- */
-function calcularCET(valorFinanciado, parcelaMensal, meses, iof, seguro) {
-  const totalParcelas = parcelaMensal * meses;
-  const valorTotalPago = totalParcelas + iof + seguro;
-  const custoTotal = valorTotalPago - valorFinanciado; // Custo além do valor financiado
-
-  // Para calcular o CET anual aproximado (taxa equivalente)
-  // Usamos a taxa interna de retorno (TIR) ou uma aproximação.
-  // A fórmula abaixo é uma aproximação para a taxa efetiva anual.
-  // CET anual = ((Total Pago / Valor Financiado) ^ (12/meses)) - 1
-  // Nota: Para um CET exato, seria necessário um cálculo iterativo (TIR).
-  const fatorCET = valorTotalPago / valorFinanciado;
-  const cetAnual = Math.pow(fatorCET, 12 / meses) - 1;
-  
-  return {
-    custoTotal,
-    cetAnual,
-    valorTotalPago,
-    totalJuros: totalParcelas - valorFinanciado // Juros pagos nas parcelas
-  };
+function calcularVPL(taxa, fluxos) {
+  let vpl = fluxos[0];
+  for (let i = 1; i < fluxos.length; i++) {
+    vpl += fluxos[i] / Math.pow(1 + taxa, i);
+  }
+  return vpl;
 }
 
-/**
- * Calcula a remuneração do capital social
- * Remuneração = Capital Social × (Taxa SELIC Anual / 100) × (prazo em anos)
- * A SELIC é uma taxa anual, e a remuneração é proporcional ao tempo.
- */
-function calcularRemuneracaoCapitalSocial(capitalSocial, taxaSelicAnual, prazoMeses) {
-  const prazoAnos = prazoMeses / 12;
-  // Convertendo taxaSelicAnual de % para decimal (ex: 10.5% -> 0.105)
-  const remuneracao = capitalSocial * (taxaSelicAnual / 100) * prazoAnos;
-  return remuneracao;
+function calcularTIR(fluxosDeCaixa) {
+  let taxaMin = 0.0, taxaMax = 1.0, taxaMedia = 0.0;
+  const precisao = 1e-7, maxIteracoes = 100;
+  if (calcularVPL(taxaMin, fluxosDeCaixa) * calcularVPL(taxaMax, fluxosDeCaixa) >= 0) {
+    return NaN;
+  }
+  for (let i = 0; i < maxIteracoes; i++) {
+    taxaMedia = (taxaMin + taxaMax) / 2;
+    let vplMedia = calcularVPL(taxaMedia, fluxosDeCaixa);
+    if (Math.abs(vplMedia) < precisao) return taxaMedia;
+    if (calcularVPL(taxaMin, fluxosDeCaixa) * vplMedia < 0) taxaMax = taxaMedia;
+    else taxaMin = taxaMedia;
+  }
+  return taxaMedia;
 }
 
-/**
- * Gera o plano de amortização (tabela Price)
- */
-function gerarPlanoAmortizacao(valorFinanciado, taxaMensal, meses, parcelaMensal) {
-  let saldoDevedor = valorFinanciado;
+function calcularRemuneracaoCapitalSocial(capital, selicAnual, meses) {
+  return capital * (selicAnual / 100) * (meses / 12);
+}
+
+function gerarPlanoAmortizacaoSAC(valorFinanciado, taxaMensal, meses) {
   const plano = [];
-
+  let saldoDevedor = valorFinanciado;
+  const amortizacaoConstante = valorFinanciado / meses;
   for (let i = 1; i <= meses; i++) {
     const jurosParcela = saldoDevedor * taxaMensal;
-    const amortizacao = parcelaMensal - jurosParcela;
-    saldoDevedor -= amortizacao;
-
+    const valorParcela = amortizacaoConstante + jurosParcela;
+    saldoDevedor -= amortizacaoConstante;
     plano.push({
-      parcela: i,
-      valorParcela: parcelaMensal,
-      juros: jurosParcela,
-      amortizacao: amortizacao,
-      saldoDevedor: saldoDevedor > 0.01 ? saldoDevedor : 0 // Evita valores negativos por imprecisão de ponto flutuante
+      parcela: i, valorParcela, juros: jurosParcela, amortizacao: amortizacaoConstante,
+      saldoDevedor: saldoDevedor > 0.01 ? saldoDevedor : 0
     });
   }
   return plano;
@@ -261,442 +120,215 @@ function gerarPlanoAmortizacao(valorFinanciado, taxaMensal, meses, parcelaMensal
 
 // === FUNÇÃO PRINCIPAL DE SIMULAÇÃO ===
 async function calcularSimulacao() {
-  // === 1. VALIDAR DADOS DE ENTRADA ===
-  // Obter o valor do input e remover a formatação de moeda para cálculo
-  const valorInput = document.getElementById("valor").value;
-  const valorFinanciado = parseFloat(valorInput.replace(/[R$\s.]/g, '').replace(',', '.'));
-  
-  const mesesFinanciamento = parseInt(document.getElementById("meses").value);
+  try {
+    const valorSolicitado = parseFloat(document.getElementById("valor").value.replace(/[R$\s.]/g, '').replace(',', '.'));
+    const mesesFinanciamento = parseInt(document.getElementById("meses").value);
+    
+    if (isNaN(valorSolicitado) || isNaN(mesesFinanciamento) || valorSolicitado <= 0 || mesesFinanciamento <= 0) {
+      mostrarMensagem('⚠️ Por favor, preencha valor e prazo válidos!', 'warning');
+      return;
+    }
+    const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
+    const custoFinanceiro = parseFloat(document.getElementById("custoFinanceiro").value) || 0;
+    const taxaBndes = parseFloat(document.getElementById("taxaBndes").value) || 0;
+    const taxaAgente = parseFloat(document.getElementById("taxaAgente").value) || 0;
 
-  // Obter parâmetros para o cálculo da taxa de juros (mesmo se ocultos, terão seus valores padrão)
-  const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
-  const custoFinanceiro = parseFloat(document.getElementById("custoFinanceiro").value);
-  const taxaBndes = parseFloat(document.getElementById("taxaBndes").value);
-  const taxaAgente = parseFloat(document.getElementById("taxaAgente").value); // Já tratada para ser 0 se direta em toggleAgentRate()
+    await buscarTaxaSelic();
 
-  if (isNaN(valorFinanciado) || isNaN(mesesFinanciamento) || valorFinanciado <= 0 || mesesFinanciamento <= 0 ||
-      isNaN(custoFinanceiro) || isNaN(taxaBndes) || isNaN(taxaAgente)) {
-    // Usando um modal simples em vez de alert para melhor UX
-    mostrarMensagem('⚠️ Por favor, preencha todos os campos com valores válidos para simulação e parâmetros de taxa!', 'warning');
-    return;
+    const taxaNominalAnual = calcularTaxaJurosFinal(tipoOperacao, custoFinanceiro, taxaBndes, taxaAgente);
+    const taxaNominalMensal = Math.pow(1 + taxaNominalAnual, 1/12) - 1;
+    
+    const iof = calcularIOF(valorSolicitado, mesesFinanciamento);
+    const seguro = calcularSeguro(valorSolicitado, mesesFinanciamento);
+    const totalDespesas = iof + seguro;
+    const valorLiquidoRecebido = valorSolicitado - totalDespesas;
+
+    const planoAmortizacao = gerarPlanoAmortizacaoSAC(valorSolicitado, taxaNominalMensal, mesesFinanciamento);
+    const listaDeParcelas = planoAmortizacao.map(p => p.valorParcela);
+
+    const fluxosDeCaixa = [valorLiquidoRecebido, ...listaDeParcelas.map(p => -p)];
+    
+    const cetMensal = calcularTIR(fluxosDeCaixa);
+    const cetAnual = Math.pow(1 + cetMensal, 12) - 1;
+
+    const valorTotalPago = listaDeParcelas.reduce((acc, curr) => acc + curr, 0);
+    const custoTotalEmprestimo = valorTotalPago - valorLiquidoRecebido;
+    
+    const remuneracaoCapitalSocial = calcularRemuneracaoCapitalSocial(valorSolicitado, taxaSelicAtual, mesesFinanciamento);
+    const jurosCompostos = (c, t, m) => c * Math.pow(1 + t, m);
+    const rendimentoPoupanca = jurosCompostos(valorSolicitado, CONFIGURACOES.TAXA_POUPANCA_MENSAL, mesesFinanciamento) - valorSolicitado;
+    const resultadoLiquido = remuneracaoCapitalSocial - custoTotalEmprestimo;
+    
+    exibirResultados({ 
+      valorFinanciado: valorSolicitado, mesesFinanciamento, taxaSelicAtual,
+      totalParcelasPagas: valorTotalPago, jurosTotais: valorTotalPago - valorSolicitado, 
+      iof, seguro, remuneracaoCapitalSocial, rendimentoPoupanca, resultadoLiquido, cetAnual, 
+      custoTotal: custoTotalEmprestimo, valorTotalPago, planoAmortizacao
+    });
+  } catch(error) {
+    console.error("Ocorreu um erro durante a simulação:", error);
+    mostrarMensagem("❌ Erro inesperado. Verifique o console.", "warning");
   }
-
-  // === 2. BUSCAR TAXA SELIC ATUAL ===
-  await buscarTaxaSelic();
-
-  // === 3. CALCULAR TAXA DE JUROS ANUAL DINÂMICA ===
-  const taxaProcapcredAnual = calcularTaxaJurosFinal(tipoOperacao, custoFinanceiro, taxaBndes, taxaAgente);
-  // Converter taxa anual do Procapcred para mensal (taxa equivalente)
-  const taxaProcapcredMensal = Math.pow(1 + taxaProcapcredAnual, 1/12) - 1;
-  
-  // === 4. CALCULAR PARCELAS E CUSTOS ===
-  const parcelaMensal = calcularParcelaMensal(valorFinanciado, taxaProcapcredMensal, mesesFinanciamento);
-  const totalParcelasPagas = parcelaMensal * mesesFinanciamento;
-  
-  // Calcular IOF e Seguro
-  const iof = calcularIOF(valorFinanciado, mesesFinanciamento);
-  const seguro = calcularSeguro(valorFinanciado, mesesFinanciamento);
-  
-  // Calcular CET
-  const dadosCET = calcularCET(valorFinanciado, parcelaMensal, mesesFinanciamento, iof, seguro);
-
-  // === 5. CALCULAR REMUNERAÇÃO DO CAPITAL SOCIAL ===
-  // Assumindo que o capital social é igual ao valor financiado para a simulação
-  const capitalSocial = valorFinanciado; 
-  const remuneracaoCapitalSocial = calcularRemuneracaoCapitalSocial(capitalSocial, taxaSelicAtual, mesesFinanciamento);
-
-  // === 6. CALCULAR INVESTIMENTO ALTERNATIVO (POUPANÇA) ===
-  const montantePoupanca = calcularJurosCompostos(valorFinanciado, CONFIGURACOES.TAXA_POUPANCA_MENSAL, mesesFinanciamento);
-  const rendimentoPoupanca = montantePoupanca - valorFinanciado;
-
-  // === 7. CALCULAR RESULTADO LÍQUIDO ===
-  // Remuneração do capital social menos o custo total do empréstimo (juros + IOF + seguros)
-  const resultadoLiquido = remuneracaoCapitalSocial - dadosCET.custoTotal;
-
-  // === 8. GERAR PLANO DE AMORTIZAÇÃO ===
-  const planoAmortizacao = gerarPlanoAmortizacao(valorFinanciado, taxaProcapcredMensal, mesesFinanciamento, parcelaMensal);
-
-  // === 9. EXIBIR RESULTADOS ===
-  exibirResultados({ 
-    valorFinanciado,
-    mesesFinanciamento,
-    taxaSelicAtual,
-    parcelaMensal,
-    totalParcelasPagas,
-    jurosTotais: dadosCET.totalJuros, // Juros apenas das parcelas
-    iof,
-    seguro,
-    remuneracaoCapitalSocial,
-    rendimentoPoupanca,
-    resultadoLiquido,
-    cetAnual: dadosCET.cetAnual,
-    custoTotal: dadosCET.custoTotal, // Custo total (juros + IOF + seguros)
-    valorTotalPago: dadosCET.valorTotalPago, // Valor total pago pelo cliente
-    planoAmortizacao
-  });
 }
 
-// === EXIBIÇÃO DE RESULTADOS ===
-function exibirResultados(dados) { 
-  // Mostrar a seção de resultados
-  document.getElementById("resultados").style.display = "block";
-  
-  // Rolar suavemente até os resultados
-  document.getElementById("resultados").scrollIntoView({ 
-    behavior: 'smooth' 
-  });
-
-  // === RESULTADO PRINCIPAL ===
-  const resultadoPrincipal = document.getElementById("resultado-principal");
-  const iconeResultado = document.getElementById("resultado-icon");
-  const tituloResultado = document.getElementById("resultado-titulo");
-  const valorResultado = document.getElementById("resultado-valor");
-  const descricaoResultado = document.getElementById("resultado-descricao");
-
-  let descricaoAdicional = `Este valor de rentabilidade é referente ao período de ${dados.mesesFinanciamento} meses e acompanha a taxa SELIC atual (${dados.taxaSelicAtual.toFixed(2).replace('.', ',')}% a.a.) do dia da simulação. Os resultados podem sofrer alterações conforme a volatilidade da SELIC.`;
-
-
-  if (dados.resultadoLiquido > 0) {
-    // É vantajoso fazer o empréstimo
-    iconeResultado.textContent = "🎉";
-    tituloResultado.textContent = "Excelente Negócio!";
-    valorResultado.textContent = `+${formatarMoeda(dados.resultadoLiquido)}`;
-    descricaoResultado.innerHTML = `Você terá lucro líquido investindo no capital social! <br>${descricaoAdicional}`;
-    resultadoPrincipal.style.background = "linear-gradient(135deg, #48bb78 0%, #38a169 100%)";
-  } else if (dados.resultadoLiquido >= -50) { // Ajustado para uma margem menor de "equilíbrio"
-    // Resultado neutro (pequena perda)
-    iconeResultado.textContent = "⚖️";
-    tituloResultado.textContent = "Resultado Equilibrado";
-    valorResultado.textContent = formatarMoeda(dados.resultadoLiquido);
-    descricaoResultado.innerHTML = `O investimento quase cobre os custos do empréstimo. Considere os benefícios intangíveis. <br>${descricaoAdicional}`;
-    resultadoPrincipal.style.background = "linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)";
+// === Funções de UI e Exibição ===
+function toggleAgentRate() {
+  const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
+  const agentRateGroup = document.getElementById('agentRateGroup');
+  if (tipoOperacao === 'direta') {
+    agentRateGroup.style.display = 'none';
+    document.getElementById('taxaAgente').value = '0'; 
   } else {
-    // Não é vantajoso
-    iconeResultado.textContent = "⚠️";
-    tituloResultado.textContent = "Atenção!";
-    valorResultado.textContent = formatarMoeda(dados.resultadoLiquido);
-    descricaoResultado.innerHTML = `A remuneração não cobrirá totalmente os custos do empréstimo. Analise com cautela. <br>${descricaoAdicional}`;
-    resultadoPrincipal.style.background = "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)";
+    agentRateGroup.style.display = 'block';
+    if (document.getElementById('taxaAgente').value === '0') document.getElementById('taxaAgente').value = '3';
   }
+}
 
-  // === COMPARATIVO ===
-  exibirComparativo(dados);
-  exibirResumoComparativo(dados); // Nova função para o resumo textual
+function toggleAdvancedSettings() {
+  const advancedSettingsDiv = document.getElementById('advancedSettings');
+  advancedSettingsDiv.style.display = (advancedSettingsDiv.style.display === 'none') ? 'block' : 'none';
+}
 
-  // === GRÁFICO ===
-  exibirGrafico(dados);
-  exibirGraficoAmortizacao(dados.planoAmortizacao); // Exibir novo gráfico de amortização
-
-  // === PARCELAS ===
-  exibirParcelas(dados.planoAmortizacao);
-
-  // === CONFIGURAR BOTÕES DE PARTILHA ===
-  configurarBotoesPartilha(dados);
+function exibirResultados(dados) {
+    document.getElementById("resultados").style.display = "block";
+    document.getElementById("resultados").scrollIntoView({ behavior: 'smooth' });
+    const descricaoAdicional = `Este valor de rentabilidade é referente ao período de ${dados.mesesFinanciamento} meses e acompanha a taxa SELIC atual (${(dados.taxaSelicAtual).toFixed(2).replace('.',',')}% a.a.) do dia da simulação.`;
+    const resultadoPrincipal = document.getElementById("resultado-principal");
+    if (dados.resultadoLiquido > 0) {
+        resultadoPrincipal.querySelector("#resultado-icon").textContent = "🎉";
+        resultadoPrincipal.querySelector("#resultado-titulo").textContent = "Excelente Negócio!";
+        resultadoPrincipal.querySelector("#resultado-valor").textContent = `+${formatarMoeda(dados.resultadoLiquido)}`;
+        resultadoPrincipal.querySelector("#resultado-descricao").innerHTML = `Você terá lucro líquido investindo no capital social! <br>${descricaoAdicional}`;
+        resultadoPrincipal.style.background = "linear-gradient(135deg, #48bb78 0%, #38a169 100%)";
+    } else if (dados.resultadoLiquido > -100) {
+        resultadoPrincipal.querySelector("#resultado-icon").textContent = "⚖️";
+        resultadoPrincipal.querySelector("#resultado-titulo").textContent = "Resultado Equilibrado";
+        resultadoPrincipal.querySelector("#resultado-valor").textContent = formatarMoeda(dados.resultadoLiquido);
+        resultadoPrincipal.querySelector("#resultado-descricao").innerHTML = `O investimento quase cobre os custos do empréstimo. <br>${descricaoAdicional}`;
+        resultadoPrincipal.style.background = "linear-gradient(135deg, #ed8936 0%, #dd6b20 100%)";
+    } else {
+        resultadoPrincipal.querySelector("#resultado-icon").textContent = "⚠️";
+        resultadoPrincipal.querySelector("#resultado-titulo").textContent = "Atenção!";
+        resultadoPrincipal.querySelector("#resultado-valor").textContent = formatarMoeda(dados.resultadoLiquido);
+        resultadoPrincipal.querySelector("#resultado-descricao").innerHTML = `A remuneração não cobrirá os custos do empréstimo. <br>${descricaoAdicional}`;
+        resultadoPrincipal.style.background = "linear-gradient(135deg, #f56565 0%, #e53e3e 100%)";
+    }
+    exibirComparativo(dados);
+    exibirResumoComparativo(dados);
+    exibirGrafico(dados);
+    exibirGraficoAmortizacao(dados.planoAmortizacao);
+    exibirParcelas(dados.planoAmortizacao);
+    configurarBotoesPartilha(dados);
 }
 
 function exibirComparativo(dados) {
-  const comparativoDiv = document.getElementById("comparativo");
-  
-  comparativoDiv.innerHTML = `
-    <div class="comparison-card ${dados.custoTotal > dados.remuneracaoCapitalSocial ? 'loser' : ''}" title="O custo total do seu empréstimo, incluindo juros, IOF e seguros.">
-      <div class="comparison-icon">💸</div>
-      <div class="comparison-title">Custo Total do Empréstimo</div>
-      <div class="comparison-value">${formatarMoeda(dados.custoTotal)}</div>
-      <div>Juros + IOF + Seguros</div>
-    </div>
-
-    <div class="comparison-card ${dados.remuneracaoCapitalSocial > dados.custoTotal ? 'winner' : ''}" title="A remuneração estimada do seu capital social, baseada em 100% da SELIC no período de ${dados.mesesFinanciamento} meses.">
-      <div class="comparison-icon">💰</div>
-      <div class="comparison-title">Remuneração do Capital Social</div>
-      <div class="comparison-value">${formatarMoeda(dados.remuneracaoCapitalSocial)}</div>
-      <div>100% da SELIC no período</div>
-    </div>
-
-    <div class="comparison-card" title="O rendimento que o valor financiado geraria se fosse investido na poupança durante ${dados.mesesFinanciamento} meses.">
-      <div class="comparison-icon">🏦</div>
-      <div class="comparison-title">Rendimento Potencial na Poupança</div>
-      <div class="comparison-value">${formatarMoeda(dados.rendimentoPoupanca)}</div>
-      <div>Se o valor fosse investido</div>
-    </div>
-
-    <div class="comparison-card" title="O Custo Efetivo Total anual do seu crédito, incluindo todos os encargos e despesas.">
-      <div class="comparison-icon">📊</div>
-      <div class="comparison-title">CET (Custo Efetivo Total) Anual</div>
-      <div class="comparison-value">${formatarPorcentagem(dados.cetAnual)}</div>
-      <div>Custo total anual do crédito</div>
-    </div>
-  `;
+    document.getElementById("comparativo").innerHTML = `
+        <div class="comparison-card" title="Custo total do empréstimo"><div class="comparison-icon">💸</div><div class="comparison-title">Custo Total do Empréstimo</div><div class="comparison-value">${formatarMoeda(dados.custoTotal)}</div><div>Juros + IOF + Seguro</div></div>
+        <div class="comparison-card" title="Remuneração do capital social"><div class="comparison-icon">💰</div><div class="comparison-title">Remuneração do Capital Social</div><div class="comparison-value">${formatarMoeda(dados.remuneracaoCapitalSocial)}</div><div>100% da SELIC no período</div></div>
+        <div class="comparison-card" title="Rendimento na poupança"><div class="comparison-icon">🏦</div><div class="comparison-title">Rendimento Potencial na Poupança</div><div class="comparison-value">${formatarMoeda(dados.rendimentoPoupanca)}</div><div>Se o valor fosse investido</div></div>
+        <div class="comparison-card" title="Custo Efetivo Total anual"><div class="comparison-icon">📊</div><div class="comparison-title">CET (Custo Efetivo Total) Anual</div><div class="comparison-value">${formatarPorcentagem(dados.cetAnual)}</div><div>Custo real anual do crédito</div></div>`;
 }
 
-/**
- * Exibe um resumo textual da comparação entre a remuneração do capital social,
- * o custo do empréstimo e o rendimento da poupança.
- */
 function exibirResumoComparativo(dados) {
     const summaryDiv = document.getElementById("summary-comparison");
-    let message = "";
-    let typeClass = "";
-
-    // Informação sobre o prazo e SELIC com a adição sobre a volatilidade
-    const infoPrazoSelic = `A rentabilidade do capital social é calculada para o prazo de ${dados.mesesFinanciamento} meses e acompanha a taxa SELIC atual (${dados.taxaSelicAtual.toFixed(2).replace('.', ',')}% a.a.) do dia da simulação. Os resultados podem sofrer alterações conforme a volatilidade da SELIC.`;
-    
-    // Nova explicação sobre CET vs. Taxa Nominal
-    const infoCetNominal = `O Custo Efetivo Total (CET) reflete o custo real do seu empréstimo, incluindo juros, IOF e seguros. Devido à forma como o IOF e os seguros são calculados (com parcelas fixas ou proporcionais ao prazo, mas não sempre exponencialmente como os juros), o CET pode ser diferente da taxa nominal anual do empréstimo, e por vezes até inferior em prazos mais longos. O CET é a taxa que realmente importa para comparar o custo total do crédito.`;
-
-
-    if (dados.resultadoLiquido > 0) {
-        message = `🎉 **Excelente!** O investimento no capital social pode gerar um lucro líquido de ${formatarMoeda(dados.resultadoLiquido)} ao final do período, superando os custos do seu empréstimo. ${infoPrazoSelic} ${infoCetNominal}`;
-        typeClass = "positive";
-    } else if (dados.resultadoLiquido >= -50) {
-        message = `⚖️ **Equilibrado.** O custo do seu empréstimo e a remuneração do capital social são muito próximos, resultando numa diferença de ${formatarMoeda(dados.resultadoLiquido)}. Considere os benefícios não financeiros. ${infoPrazoSelic} ${infoCetNominal}`;
-        typeClass = "neutral";
-    } else {
-        message = `⚠️ **Atenção!** O custo total do seu empréstimo é superior à remuneração do capital social, resultando numa perda de ${formatarMoeda(dados.resultadoLiquido)}. Avalie bem esta opção. ${infoPrazoSelic} ${infoCetNominal}`;
-        typeClass = "negative";
-    }
-
-    summaryDiv.innerHTML = message;
-    summaryDiv.className = `summary-section ${typeClass}`;
+    const infoPrazoSelic = `A rentabilidade do capital social é calculada para ${dados.mesesFinanciamento} meses com a SELIC de ${(dados.taxaSelicAtual).toFixed(2).replace('.',',')}% a.a.`;
+    const infoCetNominal = `O CET de ${formatarPorcentagem(dados.cetAnual)} reflete o custo real, incluindo IOF (${formatarMoeda(dados.iof)}) e Seguro (${formatarMoeda(dados.seguro)}).`;
+    summaryDiv.innerHTML = (dados.resultadoLiquido > 0) 
+        ? `🎉 **Excelente!** O investimento pode gerar um lucro de ${formatarMoeda(dados.resultadoLiquido)}. ${infoPrazoSelic} <br><br> ${infoCetNominal}`
+        : `⚠️ **Atenção!** O custo do empréstimo supera a remuneração. ${infoPrazoSelic} <br><br> ${infoCetNominal}`;
+    summaryDiv.className = `summary-section ${dados.resultadoLiquido > 0 ? 'positive' : 'negative'}`;
 }
 
-
 function exibirGrafico(dados) {
-  const graficoContainer = document.getElementById("grafico-container");
   const canvas = document.getElementById("grafico");
-  
-  graficoContainer.style.display = "block";
-
-  // Destruir gráfico anterior se existir
-  if (window.meuGrafico) {
-    window.meuGrafico.destroy();
-  }
-
-  // Criar novo gráfico
+  if (window.meuGrafico) window.meuGrafico.destroy();
   window.meuGrafico = new Chart(canvas, {
     type: 'bar',
     data: {
       labels: ['💸 Custo Total', '💰 Remuneração Capital', '🏦 Rend. Poupança'],
-      datasets: [{
-        label: 'Valores em R$',
-        data: [dados.custoTotal, dados.remuneracaoCapitalSocial, dados.rendimentoPoupanca],
-        backgroundColor: [
-          'rgba(245, 101, 101, 0.8)',  // Vermelho para custos
-          'rgba(72, 187, 120, 0.8)',   // Verde para remuneração
-          'rgba(33, 150, 243, 0.8)'    // Azul para poupança
-        ],
-        borderColor: [
-          'rgb(245, 101, 101)',
-          'rgb(72, 187, 120)',
-          'rgb(33, 150, 243)'
-        ],
-        borderWidth: 2
-      }]
+      datasets: [{ data: [dados.custoTotal, dados.remuneracaoCapitalSocial, dados.rendimentoPoupanca], backgroundColor: ['#f56565', '#48bb78', '#4299e1'] }]
     },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { 
-          display: false 
-        },
-        tooltip: { 
-          callbacks: { 
-            label: function(context) {
-              return formatarMoeda(context.raw);
-            }
-          }
-        }
-      },
-      scales: {
-        y: { 
-          beginAtZero: true,
-          ticks: { 
-            callback: function(value) {
-              return formatarMoeda(value);
-            }
-          }
-        }
-      }
+    options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatarMoeda(c.raw) } } },
+      scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatarMoeda(v) } } }
     }
   });
 }
 
-/**
- * Exibe um gráfico de linha para o plano de amortização, mostrando juros, amortização e saldo devedor.
- */
-function exibirGraficoAmortizacao(planoAmortizacao) {
-    const amortizacaoChartContainer = document.getElementById("amortizacao-chart-container");
+function exibirGraficoAmortizacao(plano) {
     const canvas = document.getElementById("grafico-amortizacao");
-    
-    amortizacaoChartContainer.style.display = "block";
-
-    // Destruir gráfico anterior se existir
-    if (window.meuGraficoAmortizacao) {
-        window.meuGraficoAmortizacao.destroy();
-    }
-
-    const labels = planoAmortizacao.map(item => `Mês ${item.parcela}`);
-    const jurosData = planoAmortizacao.map(item => item.juros);
-    const amortizacaoData = planoAmortizacao.map(item => item.amortizacao);
-    const saldoDevedorData = planoAmortizacao.map(item => item.saldoDevedor);
-
+    if (window.meuGraficoAmortizacao) window.meuGraficoAmortizacao.destroy();
     window.meuGraficoAmortizacao = new Chart(canvas, {
         type: 'line',
         data: {
-            labels: labels,
+            labels: plano.map(p => `Mês ${p.parcela}`),
             datasets: [
-                {
-                    label: 'Juros',
-                    data: jurosData,
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    fill: true,
-                    tension: 0.3
-                },
-                {
-                    label: 'Amortização',
-                    data: amortizacaoData,
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    fill: true,
-                    tension: 0.3
-                },
-                {
-                    label: 'Saldo Devedor',
-                    data: saldoDevedorData,
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    fill: false, /* Não preencher abaixo da linha para saldo devedor */
-                    tension: 0.3
-                }
+                { label: 'Juros', data: plano.map(p => p.juros), borderColor: '#f56565', tension: 0.1, fill: true, backgroundColor: 'rgba(245, 101, 101, 0.2)' },
+                { label: 'Amortização', data: plano.map(p => p.amortizacao), borderColor: '#4299e1', tension: 0.1, fill: true, backgroundColor: 'rgba(66, 153, 225, 0.2)' },
+                { label: 'Saldo Devedor', data: plano.map(p => p.saldoDevedor), borderColor: '#48bb78', tension: 0.1 }
             ]
         },
-        options: {
-            responsive: true,
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return `${context.dataset.label}: ${formatarMoeda(context.raw)}`;
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Mês'
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Valor (R$)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return formatarMoeda(value);
-                            }
-                        }
-                    }
-                }
-            }
+        options: { responsive: true, plugins: { tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${formatarMoeda(c.raw)}` } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatarMoeda(v) } } }
         }
     });
 }
 
-function exibirParcelas(planoAmortizacao) {
-  const parcelasGrid = document.getElementById("parcelas-grid");
-  parcelasGrid.innerHTML = ''; // Limpa o conteúdo anterior
-
-  planoAmortizacao.forEach(item => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td data-label="Parcela">${item.parcela}</td>
-      <td data-label="Valor da Parcela">${formatarMoeda(item.valorParcela)}</td>
-      <td data-label="Juros">${formatarMoeda(item.juros)}</td>
-      <td data-label="Amortização">${formatarMoeda(item.amortizacao)}</td>
-      <td data-label="Saldo Devedor">${formatarMoeda(item.saldoDevedor)}</td>
-    `;
-    parcelasGrid.appendChild(row);
+function exibirParcelas(plano) {
+  const grid = document.getElementById("parcelas-grid");
+  grid.innerHTML = '';
+  plano.forEach(p => {
+    grid.innerHTML += `<tr><td data-label="Parcela">${p.parcela}</td><td data-label="Valor da Parcela">${formatarMoeda(p.valorParcela)}</td><td data-label="Juros">${formatarMoeda(p.juros)}</td><td data-label="Amortização">${formatarMoeda(p.amortizacao)}</td><td data-label="Saldo Devedor">${formatarMoeda(p.saldoDevedor)}</td></tr>`;
   });
 }
 
-/**
- * Configura os botões de partilha com os dados da simulação.
- */
 function configurarBotoesPartilha(dados) {
-    const shareWhatsappBtn = document.getElementById('share-whatsapp');
-    const shareEmailBtn = document.getElementById('share-email');
-
-    const message = `Simulação Procapcred:\n\n` +
-                    `Valor Financiado: ${formatarMoeda(dados.valorFinanciado)}\n` +
-                    `Prazo: ${dados.mesesFinanciamento} meses\n` +
-                    `Custo Total do Empréstimo: ${formatarMoeda(dados.custoTotal)}\n` +
-                    `Remuneração do Capital Social: ${formatarMoeda(dados.remuneracaoCapitalSocial)}\n` +
-                    `Resultado Líquido: ${formatarMoeda(dados.resultadoLiquido)}\n` +
-                    `CET Anual: ${formatarPorcentagem(dados.cetAnual)}\n\n` +
-                    `Lembre-se: A rentabilidade do capital social acompanha a SELIC atual (${dados.taxaSelicAtual.toFixed(2).replace('.', ',')}% a.a.) do dia da simulação. Os resultados podem sofrer alterações conforme a volatilidade da SELIC.`;
-
-    // WhatsApp
-    shareWhatsappBtn.href = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-
-    // Email
-    const subject = encodeURIComponent('Simulação Procapcred - Seus Resultados');
-    const body = encodeURIComponent(message);
-    document.getElementById('share-email').onclick = function() {
-        window.open(`mailto:?subject=${subject}&body=${body}`);
-        return false; // Previne a navegação padrão do link
-    };
+    const message = `Simulação Procapcred (SAC):\n- Valor: ${formatarMoeda(dados.valorFinanciado)}\n- Prazo: ${dados.mesesFinanciamento} meses\n- Lucro Líquido: ${formatarMoeda(dados.resultadoLiquido)}\n- CET Anual: ${formatarPorcentagem(dados.cetAnual)}`;
+    document.getElementById('share-whatsapp').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    document.getElementById('share-email').href = `mailto:?subject=Simulação Procapcred&body=${encodeURIComponent(message)}`;
 }
 
-// Função para exibir mensagens (substitui alert)
 function mostrarMensagem(mensagem, tipo = 'info') {
-  // Cria um elemento de mensagem simples no topo da página
-  let messageBox = document.getElementById('message-box');
-  if (!messageBox) {
-    messageBox = document.createElement('div');
-    messageBox.id = 'message-box';
-    Object.assign(messageBox.style, {
-      position: 'fixed',
-      top: '20px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      padding: '15px 25px',
-      borderRadius: '10px',
-      boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
-      zIndex: '1000',
-      fontSize: '1.1em',
-      fontWeight: 'bold',
-      color: 'white',
-      textAlign: 'center',
-      opacity: '0',
-      transition: 'opacity 0.5s ease-in-out, transform 0.5s ease-in-out'
+  let box = document.getElementById('message-box');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'message-box';
+    Object.assign(box.style, {
+      position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+      padding: '15px 25px', borderRadius: '10px', zIndex: '1000', color: 'white',
+      boxShadow: '0 5px 15px rgba(0,0,0,0.2)', transition: 'all 0.5s'
     });
-    document.body.appendChild(messageBox);
+    document.body.appendChild(box);
   }
-
-  messageBox.textContent = mensagem;
-  if (tipo === 'warning') {
-    messageBox.style.backgroundColor = '#f0ad4e'; // Laranja
-  } else if (tipo === 'success') {
-    messageBox.style.backgroundColor = '#5cb85c'; // Verde
-  } else {
-    messageBox.style.backgroundColor = '#5bc0de'; // Azul
-  }
-
-  messageBox.style.opacity = '1';
-  messageBox.style.transform = 'translateX(-50%) translateY(0)';
-
+  box.style.backgroundColor = tipo === 'warning' ? '#f0ad4e' : '#5cb85c';
+  box.textContent = mensagem;
+  box.style.opacity = '1';
+  box.style.transform = 'translateX(-50%) translateY(0)';
   setTimeout(() => {
-    messageBox.style.opacity = '0';
-    messageBox.style.transform = 'translateX(-50%) translateY(-20px)';
-    setTimeout(() => messageBox.remove(), 500); // Remove após a transição
+    box.style.opacity = '0';
+    box.style.transform = 'translateX(-50%) translateY(-20px)';
+    setTimeout(() => { if(box) box.remove(); }, 500);
   }, 3000);
 }
 
-// Inicializa a busca pela SELIC ao carregar a página e ajusta a visibilidade
+// === INICIALIZAÇÃO DA PÁGINA ===
 document.addEventListener('DOMContentLoaded', () => {
+  // Configura os botões PF/PJ
+  const btnPj = document.getElementById('btn-pj');
+  const btnPf = document.getElementById('btn-pf');
+
+  btnPj.addEventListener('click', () => {
+      tipoCliente = 'PJ';
+      btnPj.classList.add('active');
+      btnPf.classList.remove('active');
+  });
+
+  btnPf.addEventListener('click', () => {
+      tipoCliente = 'PF';
+      btnPf.classList.add('active');
+      btnPj.classList.remove('active');
+  });
+  
+  // Funções iniciais
   buscarTaxaSelic();
-  toggleAgentRate(); // Garante o estado correto ao carregar a página
+  toggleAgentRate();
 });

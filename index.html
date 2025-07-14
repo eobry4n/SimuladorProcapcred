@@ -1,186 +1,841 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>💰 Simulador Procapcred Inteligente</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Procapcred Inteligente</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* RESET E ESTILOS GLOBAIS */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8fbff 0%, #e8f4f8 100%);
+            color: #003641;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 30px;
+            background: #fff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00A294, #7DB61C, #C9D200);
+        }
+        /* HEADER */
+        header {
+            background: linear-gradient(135deg, #003641 0%, #00A294 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+        header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: shimmer 6s linear infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        header .logo img {
+            max-width: 200px;
+            margin-bottom: 20px;
+        }
+        header h1 {
+            margin-bottom: 15px;
+            font-size: 2.2em;
+            font-weight: 600;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        /* SEÇÃO DO FORMULÁRIO */
+        .form-section {
+            padding: 30px 0;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .input-group { margin-bottom: 25px; }
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #003641;
+            font-size: 1.1em;
+        }
+        .input-group input[type="text"],
+        .input-group input[type="number"] {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+        .input-group input[type="text"]:focus,
+        .input-group input[type="number"]:focus {
+            outline: none;
+            border-color: #00A294;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(0, 162, 148, 0.1);
+        }
+        .advanced-toggle {
+            cursor: pointer;
+            color: #003641;
+            font-weight: 600;
+            margin: 25px 0;
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #e8f9f7, #f0fdf9);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid #00A294;
+        }
+        .advanced-toggle:hover {
+            background: linear-gradient(135deg, #d1f2ed, #e8f9f7);
+            transform: translateY(-2px);
+        }
+        #advancedSettings {
+            padding: 25px;
+            background: linear-gradient(135deg, #fafafa, #f5f5f5);
+            border-radius: 15px;
+            margin-top: 15px;
+            border: 1px solid #e0e0e0;
+        }
+        .radio-group {
+            display: flex;
+            gap: 25px;
+            margin-top: 10px;
+        }
+        .radio-group input[type="radio"] { margin-right: 8px; }
+        .radio-group label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        #calculate-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #00A294, #7DB61C);
+            color: white;
+            font-size: 1.3em;
+            font-weight: 600;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 20px;
+        }
+        #calculate-btn:hover {
+            background: linear-gradient(135deg, #008a7a, #6ba015);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 162, 148, 0.3);
+        }
+        /* ESTILOS PARA OS BOTÕES PF/PJ */
+        .button-toggle {
+            display: flex;
+            border: 2px solid #00A294;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .button-toggle button {
+            flex-grow: 1;
+            padding: 15px 20px;
+            border: none;
+            background-color: #f8f9fa;
+            color: #003641;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            font-weight: 500;
+        }
+        .button-toggle button:first-child { border-right: 1px solid #00A294; }
+        .button-toggle button.active {
+            background: linear-gradient(135deg, #00A294, #7DB61C);
+            color: white;
+            font-weight: 600;
+        }
+        .button-toggle button:not(.active):hover {
+            background-color: #e8f9f7;
+        }
+        /* SEÇÃO DE RESULTADOS */
+        .results-section { padding-top: 30px; animation: fadeIn 0.6s ease; }
+        .results-section h2, .results-section h3 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #003641;
+            font-weight: 600;
+        }
+        .results-section h2 { font-size: 2em; margin-bottom: 30px; }
+        #resultado-principal {
+            padding: 35px;
+            border-radius: 20px;
+            color: white;
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        #resultado-principal::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1), transparent);
+        }
+        #resultado-icon { font-size: 4em; margin-bottom: 15px; }
+        #resultado-titulo {
+            font-size: 2.2em;
+            font-weight: 600;
+            margin: 15px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        #resultado-valor {
+            font-size: 3em;
+            font-weight: 700;
+            margin: 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        #resultado-descricao { margin-top: 15px; font-size: 1.1em; opacity: 0.9; }
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        .comparison-card {
+            background: linear-gradient(135deg, #f9f9f9, #ffffff);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .comparison-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #00A294, #7DB61C);
+        }
+        .comparison-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+        }
+        .comparison-icon { font-size: 2.5em; margin-bottom: 15px; }
+        .comparison-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #003641;
+            margin-bottom: 10px;
+        }
+        .comparison-value {
+            font-size: 1.8em;
+            color: #00A294;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .summary-section {
+            padding: 25px;
+            border-radius: 15px;
+            margin: 40px 0;
+            line-height: 1.8;
+            font-size: 1.1em;
+        }
+        .summary-section.positive { background: linear-gradient(135deg, #e8f9f7, #f0fdf9); border-left: 5px solid #00A294; }
+        .summary-section.neutral { background: linear-gradient(135deg, #fff3e0, #fef8e0); border-left: 5px solid #ff9800; }
+        .summary-section.negative { background: linear-gradient(135deg, #ffebee, #fff0f0); border-left: 5px solid #f44336; }
+
+        .chart-container {
+            margin-bottom: 50px;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 15px;
+            border: 1px solid #e0e0e0;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        #amortizacao-table { width: 100%; border-collapse: collapse; }
+        #amortizacao-table th, #amortizacao-table td {
+            padding: 15px;
+            text-align: right;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        #amortizacao-table th {
+            background: linear-gradient(135deg, #003641, #00A294);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        #amortizacao-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        #amortizacao-table tbody tr:hover { background-color: #e8f9f7; }
+        .share-buttons { text-align: center; margin-top: 40px; }
+        .share-buttons a {
+            text-decoration: none;
+            color: white;
+            background: linear-gradient(135deg, #003641, #00A294);
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .share-buttons a:hover {
+            background: linear-gradient(135deg, #002a33, #008a7a);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 54, 65, 0.3);
+        }
+        /* FOOTER */
+        footer {
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9em;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        }
+        /* MODAL DE MENSAGEM */
+        #message-box {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 20px 30px;
+            border-radius: 15px;
+            z-index: 1000;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transition: all 0.5s ease;
+            font-weight: 600;
+        }
+        /* ANIMAÇÕES */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* RESPONSIVIDADE */
+        @media (max-width: 768px) {
+            .container { margin: 10px; padding: 20px; }
+            header { padding: 30px 20px; }
+            header h1 { font-size: 1.8em; }
+            .card-container { grid-template-columns: 1fr; }
+            .button-toggle { flex-direction: column; }
+            .button-toggle button:first-child {
+                border-right: none;
+                border-bottom: 1px solid #00A294;
+            }
+            .share-buttons a { display: block; margin: 10px 0; }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="logo">
-        <img src="https://iili.io/FG82yRs.png" alt="Logo Sicoob" onerror="this.onerror=null;this.src='https://iili.io/FG82yRs.png';"/>
-      </div>
-      <h1 class="title">💰 Simulador Procapcred</h1>
-      <p class="subtitle">Descubra se vale a pena investir no capital social enquanto paga seu empréstimo</p>
+
+    <header>
+        <div class="logo">
+            <img src="https://iili.io/FG82yRs.png" alt="Logo Sicoob" style="filter: brightness(0) invert(1);">
+        </div>
+        <h1>Simulador Procapcred Inteligente</h1>
+        <p>Descubra se vale a pena investir no capital social enquanto paga seu empréstimo.</p>
     </header>
 
-    <section class="form-section">
-      <div class="form-group">
-        <label for="valor" class="form-label">💵 Valor que você quer financiar</label>
-        <input 
-          type="text" 
-          id="valor" 
-          class="form-input" 
-          placeholder="Ex: 50.000"
-          oninput="formatInputAsNumber(this)" 
-          onblur="formatInputAsCurrency(this)"
-          title="Insira o valor desejado para financiamento. Será formatado como moeda ao sair do campo."
-        />
-      </div>
+    <main class="container">
+        <section class="form-section">
+            <form id="simulation-form" onsubmit="event.preventDefault(); calcularSimulacao();">
+                <div class="input-group">
+                    <label for="valor">💰 Valor que você quer financiar</label>
+                    <input type="text" id="valor" placeholder="R$ 10.000,00" required oninput="formatInputAsNumber(this)" onblur="formatInputAsCurrency(this)">
+                </div>
 
-      <div class="form-group">
-        <label for="meses" class="form-label">📅 Em quantos meses quer pagar?</label>
-        <input 
-          type="number" 
-          id="meses" 
-          class="form-input" 
-          placeholder="Ex: 24"
-          min="3"
-          max="120"
-          title="Defina o número de meses para pagar o financiamento (mínimo 3, máximo 120)."
-        />
-      </div>
+                <div class="input-group">
+                    <label for="meses">📅 Em quantos meses quer pagar?</label>
+                    <input type="number" id="meses" value="24" placeholder="24" required>
+                </div>
 
-      <div class="form-group">
-        <button type="button" class="simulate-btn" style="background: linear-gradient(45deg, #007bff, #0056b3); margin-top: 15px;" onclick="toggleAdvancedSettings()" title="Clique para mostrar/ocultar configurações avançadas de taxa.">
-          ⚙️ Configurações Avançadas
-        </button>
-      </div>
+                <div class="input-group">
+                    <label>👤 Tipo de Cliente (para cálculo do IOF)</label>
+                    <div class="button-toggle" id="tipo-cliente-toggle">
+                        <button type="button" id="btn-pj" class="active">Pessoa Jurídica (PJ)</button>
+                        <button type="button" id="btn-pf">Pessoa Física (PF)</button>
+                    </div>
+                </div>
+                
+                <div class="advanced-toggle" onclick="toggleAdvancedSettings()">
+                    ⚙️ CONFIGURAÇÕES AVANÇADAS <span>&#9662;</span>
+                </div>
 
-      <div id="advancedSettings" style="display: none; border-top: 1px solid #e0e6ed; padding-top: 20px; margin-top: 20px;">
-        <div class="form-group">
-          <label class="form-label">Tipo de Operação</label>
-          <div class="radio-group">
-            <label>
-              <input type="radio" name="tipoOperacao" value="indireta" checked onchange="toggleAgentRate()"> Operações Indiretas
-            </label>
-            <label>
-              <input type="radio" name="tipoOperacao" value="direta" onchange="toggleAgentRate()"> Operações Diretas
-            </label>
-          </div>
-        </div>
+                <div id="advancedSettings" style="display:none;">
+                    <div class="input-group">
+                        <label>🏦 Tipo de Operação</label>
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" id="direta" name="tipoOperacao" value="direta" onchange="toggleAgentRate()">
+                                Direta
+                            </label>
+                            <label>
+                                <input type="radio" id="indireta" name="tipoOperacao" value="indireta" checked onchange="toggleAgentRate()">
+                                Indireta
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="custoFinanceiro">📊 Custo Financeiro (%)</label>
+                        <input type="number" id="custoFinanceiro" value="7.0" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="taxaBndes">🏛️ Taxa BNDES (%)</label>
+                        <input type="number" id="taxaBndes" value="1.17" step="0.1">
+                    </div>
+                    <div class="input-group" id="agentRateGroup">
+                        <label for="taxaAgente">🤝 Taxa Agente Financeiro (%)</label>
+                        <input type="number" id="taxaAgente" value="3.0" step="0.1">
+                    </div>
+                </div>
+                
+                <button type="submit" id="calculate-btn">🚀 CALCULAR SIMULAÇÃO</button>
+            </form>
+        </section>
 
-        <div class="form-group">
-          <label for="custoFinanceiro" class="form-label">Custo Financeiro (Ex: 7 para 7%)</label>
-          <input 
-            type="number" 
-            id="custoFinanceiro" 
-            class="form-input" 
-            placeholder="Ex: 7"
-            min="0"
-            step="0.01"
-            value="7"
-            title="Insira o Custo Financeiro anual em porcentagem (ex: 7 para 7%)."
-          />
-        </div>
+        <section id="resultados" class="results-section" style="display:none;">
+            <h2>✨ Seu Resultado Personalizado</h2>
+            
+            <div id="resultado-principal">
+                <div id="resultado-icon">🎉</div>
+                <div id="resultado-titulo">Excelente Negócio!</div>
+                <div id="resultado-valor">+R$ 0,00</div>
+                <p id="resultado-descricao">Você terá lucro líquido!</p>
+            </div>
 
-        <div class="form-group">
-          <label for="taxaBndes" class="form-label">Taxa do BNDES (Ex: 1.5 para 1.5%)</label>
-          <input 
-            type="number" 
-            id="taxaBndes" 
-            class="form-input" 
-            placeholder="Ex: 1.5 ou 5"
-            min="0"
-            step="0.01"
-            value="1.5"
-            title="Insira a Taxa do BNDES anual em porcentagem (ex: 1.5 para 1.5% ou 5 para 5%)."
-          />
-        </div>
+            <div id="comparativo" class="card-container"></div>
 
-        <div class="form-group" id="agentRateGroup">
-          <label for="taxaAgente" class="form-label">Taxa do Agente Financeiro (Ex: 3 para 3%)</label>
-          <input 
-            type="number" 
-            id="taxaAgente" 
-            class="form-input" 
-            placeholder="Ex: 3"
-            min="0"
-            step="0.01"
-            value="3"
-            title="Insira a Taxa do Agente Financeiro anual em porcentagem (ex: 3 para 3%)."
-          />
-        </div>
-      </div>
-      <button class="simulate-btn" onclick="calcularSimulacao()" title="Clique para calcular a sua simulação financeira.">
-        🚀 Calcular Simulação
-      </button>
-    </section>
+            <div id="summary-comparison" class="summary-section"></div>
 
-    <section class="results-section" id="resultados">
-      <div class="result-card" id="resultado-principal">
-        <div class="result-title">
-          <span id="resultado-icon">🎯</span>
-          <span id="resultado-titulo">Resultado da Análise</span>
-        </div>
-        <div class="result-value" id="resultado-valor">R$ 0,00</div>
-        <div class="result-description" id="resultado-descricao">
-          Calculando...
-        </div>
-      </div>
+            <h3>📊 Comparativo Visual</h3>
+            <div id="grafico-container" class="chart-container">
+                <canvas id="grafico"></canvas>
+            </div>
 
-      <div class="comparison-grid" id="comparativo">
-        </div>
+            <h3>📈 Plano de Amortização (Juros vs. Amortização)</h3>
+            <div id="amortizacao-chart-container" class="chart-container">
+                <canvas id="grafico-amortizacao"></canvas>
+            </div>
 
-      <div class="summary-section" id="summary-comparison">
-        </div>
+            <h3>📋 Detalhes do Financiamento</h3>
+            <div class="table-container">
+                <table id="amortizacao-table">
+                    <thead>
+                        <tr>
+                            <th>Parcela</th>
+                            <th>Valor da Parcela</th>
+                            <th>Juros</th>
+                            <th>Amortização</th>
+                            <th>Saldo Devedor</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parcelas-grid"></tbody>
+                </table>
+            </div>
 
-      <div class="chart-container" id="grafico-container" style="display: none;">
-        <h3 class="chart-title">📊 Comparativo Visual</h3>
-        <canvas id="grafico" width="400" height="200"></canvas>
-      </div>
+            <div class="share-buttons">
+                <a href="#" id="share-whatsapp" target="_blank">📱 Compartilhar no WhatsApp</a>
+                <a href="#" id="share-email">📧 Compartilhar por E-mail</a>
+            </div>
+        </section>
+    </main>
 
-      <div class="chart-container" id="amortizacao-chart-container" style="display: none;">
-        <h3 class="chart-title">📈 Plano de Amortização (Juros vs. Amortização)</h3>
-        <canvas id="grafico-amortizacao" width="400" height="200"></canvas>
-      </div>
-
-      <div class="installments-section" id="parcelamento">
-        <h3 class="installments-title">
-          💳 Detalhes do Financiamento
-        </h3>
-        <div class="installments-table-container">
-          <table class="installments-table">
-            <thead>
-              <tr>
-                <th>Parcela</th>
-                <th>Valor da Parcela</th>
-                <th>Juros</th>
-                <th>Amortização</th>
-                <th>Saldo Devedor</th>
-              </tr>
-            </thead>
-            <tbody id="parcelas-grid">
-              </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="actions-section">
-      <a href="https://wa.me/5562999999999" class="whatsapp-btn" target="_blank" title="Fale com um gerente via WhatsApp para mais informações.">
-        📱 Falar com Gerente no WhatsApp
-      </a>
-      <div class="share-buttons">
-        <a href="#" id="share-whatsapp" class="share-btn whatsapp" title="Partilhar os resultados no WhatsApp.">
-          <i class="fab fa-whatsapp"></i> Partilhar no WhatsApp
-        </a>
-        <a href="#" id="share-email" class="share-btn email" title="Partilhar os resultados por e-mail.">
-          <i class="fas fa-envelope"></i> Partilhar por E-mail
-        </a>
-      </div>
-    </section>
-
-    <footer class="footer">
-      <p>🏦 Desenvolvido por <strong>Inteligência Competitiva - Sicoob Unicidades</strong></p>
-      <p>💡 Simulação baseada em dados reais da taxa SELIC</p>
+    <footer>
+        <p>🚀 Desenvolvido por Inteligência Competitiva • Sicoob Unicidades</p>
     </footer>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="script.js"></script>
+    <script>
+        // ===================================================================================
+        // JAVASCRIPT COMPLETO E INTEGRADO
+        // ===================================================================================
+
+        // === CONFIGURAÇÕES E CONSTANTES ===
+        const CONFIGURACOES = {
+            TAXA_POUPANCA_MENSAL: 0.005,
+            API_SELIC: "https://api.bcb.gov.br/dados/serie/bcdata.sgs.4189/dados/ultimos/1?formato=json",
+            SELIC_PADRAO: 10.5,
+            IOF: {
+                ADICIONAL: 0.0038,
+                PF_TAXA_DIARIA: 0.000082,
+                PJ_TAXA_DIARIA: 0.000041
+            },
+            SEGURO_TAXA_PROPORCIONAL: 0
+        };
+
+        // === DADOS GLOBAIS E ESTADO DA APLICAÇÃO ===
+        let taxaSelicAtual = CONFIGURACOES.SELIC_PADRAO;
+        let tipoCliente = 'PJ'; // Estado inicial padrão
+
+        // === UTILITÁRIOS ===
+        const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const formatarPorcentagem = (valor) => {
+            if (isNaN(valor) || !isFinite(valor)) return 'Inválido';
+            return (valor * 100).toFixed(2).replace('.', ',') + '%';
+        };
+
+        // === FUNÇÕES DE FORMATAÇÃO DE INPUT ===
+        function formatInputAsNumber(input) {
+            let value = input.value.replace(/[^\d]/g, '');
+            input.dataset.rawValue = value; 
+        }
+
+        function formatInputAsCurrency(input) {
+            let value = input.dataset.rawValue || input.value.replace(/[^\d]/g, '');
+            if (value && !isNaN(value)) {
+                const numberValue = parseFloat(value) / 100;
+                input.value = formatarMoeda(numberValue);
+            } else {
+                input.value = '';
+            }
+        }
+        
+        // === LÓGICA DE CÁLCULO FINANCEIRO ===
+        async function buscarTaxaSelic() {
+            try {
+                const resposta = await fetch(CONFIGURACOES.API_SELIC);
+                const dados = await resposta.json();
+                taxaSelicAtual = parseFloat(dados[0].valor.replace(',', '.'));
+            } catch (erro) {
+                console.warn('⚠️ Erro ao buscar SELIC, usando taxa padrão:', erro);
+            }
+        }
+        
+        function calcularTaxaJurosFinal(tipo, custo, bndes, agente) {
+            const fatorCusto = 1 + (custo / 100);
+            const fatorBndes = 1 + (bndes / 100);
+            if (tipo === 'indireta') {
+                const fatorAgente = 1 + (agente / 100);
+                return (fatorCusto * fatorBndes * fatorAgente) - 1;
+            }
+            return (fatorCusto * fatorBndes) - 1;
+        }
+
+        function calcularIOF(valor, meses) {
+            const dias = Math.min(meses * 30, 365);
+            const taxaDiaria = (tipoCliente === 'PF') 
+                ? CONFIGURACOES.IOF.PF_TAXA_DIARIA 
+                : CONFIGURACOES.IOF.PJ_TAXA_DIARIA;
+            const iofDiario = valor * taxaDiaria * dias;
+            const iofAdicional = valor * CONFIGURACOES.IOF.ADICIONAL;
+            return iofDiario + iofAdicional;
+        }
+
+        function calcularSeguro(valor, meses) {
+            return valor * CONFIGURACOES.SEGURO_TAXA_PROPORCIONAL * meses;
+        }
+
+        function calcularVPL(taxa, fluxos) {
+            let vpl = fluxos[0];
+            for (let i = 1; i < fluxos.length; i++) {
+                vpl += fluxos[i] / Math.pow(1 + taxa, i);
+            }
+            return vpl;
+        }
+
+        function calcularTIR(fluxosDeCaixa) {
+            let taxaMin = 0.0, taxaMax = 1.0, taxaMedia = 0.0;
+            const precisao = 1e-7, maxIteracoes = 100;
+            if (calcularVPL(taxaMin, fluxosDeCaixa) * calcularVPL(taxaMax, fluxosDeCaixa) >= 0) return NaN;
+            for (let i = 0; i < maxIteracoes; i++) {
+                taxaMedia = (taxaMin + taxaMax) / 2;
+                let vplMedia = calcularVPL(taxaMedia, fluxosDeCaixa);
+                if (Math.abs(vplMedia) < precisao) return taxaMedia;
+                if (calcularVPL(taxaMin, fluxosDeCaixa) * vplMedia < 0) taxaMax = taxaMedia;
+                else taxaMin = taxaMedia;
+            }
+            return taxaMedia;
+        }
+
+        function calcularRemuneracaoCapitalSocial(capital, selicAnual, meses) {
+            return capital * (selicAnual / 100) * (meses / 12);
+        }
+
+        function gerarPlanoAmortizacaoSAC(valorFinanciado, taxaMensal, meses) {
+            const plano = [];
+            let saldoDevedor = valorFinanciado;
+            const amortizacaoConstante = valorFinanciado / meses;
+            for (let i = 1; i <= meses; i++) {
+                const jurosParcela = saldoDevedor * taxaMensal;
+                const valorParcela = amortizacaoConstante + jurosParcela;
+                saldoDevedor -= amortizacaoConstante;
+                plano.push({
+                    parcela: i, valorParcela, juros: jurosParcela, amortizacao: amortizacaoConstante,
+                    saldoDevedor: saldoDevedor > 0.01 ? saldoDevedor : 0
+                });
+            }
+            return plano;
+        }
+
+        // === FUNÇÃO PRINCIPAL DE SIMULAÇÃO ===
+        async function calcularSimulacao() {
+            try {
+                const valorInput = document.getElementById("valor");
+                let valorSolicitado = parseFloat(valorInput.dataset.rawValue) / 100;
+                if(isNaN(valorSolicitado)) {
+                    valorSolicitado = parseFloat(valorInput.value.replace(/[R$\s.,]/g, '')) / 100;
+                }
+                
+                const mesesFinanciamento = parseInt(document.getElementById("meses").value);
+                
+                if (isNaN(valorSolicitado) || isNaN(mesesFinanciamento) || valorSolicitado <= 0 || mesesFinanciamento <= 0) {
+                    mostrarMensagem('⚠️ Por favor, preencha valor e prazo válidos!', 'warning');
+                    return;
+                }
+                const tipoOperacao = document.querySelector('input[name="tipoOperacao"]:checked').value;
+                const custoFinanceiro = parseFloat(document.getElementById("custoFinanceiro").value) || 0;
+                const taxaBndes = parseFloat(document.getElementById("taxaBndes").value) || 0;
+                const taxaAgente = parseFloat(document.getElementById("taxaAgente").value) || 0;
+
+                await buscarTaxaSelic();
+
+                const taxaNominalAnual = calcularTaxaJurosFinal(tipoOperacao, custoFinanceiro, taxaBndes, taxaAgente);
+                const taxaNominalMensal = Math.pow(1 + taxaNominalAnual, 1/12) - 1;
+                
+                const iof = calcularIOF(valorSolicitado, mesesFinanciamento);
+                const seguro = calcularSeguro(valorSolicitado, mesesFinanciamento);
+                const totalDespesas = iof + seguro;
+                const valorLiquidoRecebido = valorSolicitado - totalDespesas;
+
+                const planoAmortizacao = gerarPlanoAmortizacaoSAC(valorSolicitado, taxaNominalMensal, mesesFinanciamento);
+                const listaDeParcelas = planoAmortizacao.map(p => p.valorParcela);
+
+                const fluxosDeCaixa = [valorLiquidoRecebido, ...listaDeParcelas.map(p => -p)];
+                
+                const cetMensal = calcularTIR(fluxosDeCaixa);
+                const cetAnual = Math.pow(1 + cetMensal, 12) - 1;
+
+                const valorTotalPago = listaDeParcelas.reduce((acc, curr) => acc + curr, 0);
+                const custoTotalEmprestimo = valorTotalPago - valorLiquidoRecebido;
+                
+                const remuneracaoCapitalSocial = calcularRemuneracaoCapitalSocial(valorSolicitado, taxaSelicAtual, mesesFinanciamento);
+                const jurosCompostos = (c, t, m) => c * Math.pow(1 + t, m);
+                const rendimentoPoupanca = jurosCompostos(valorSolicitado, CONFIGURACOES.TAXA_POUPANCA_MENSAL, mesesFinanciamento) - valorSolicitado;
+                const resultadoLiquido = remuneracaoCapitalSocial - custoTotalEmprestimo;
+                
+                exibirResultados({ 
+                    valorFinanciado: valorSolicitado, mesesFinanciamento, taxaSelicAtual,
+                    totalParcelasPagas: valorTotalPago, jurosTotais: valorTotalPago - valorSolicitado, 
+                    iof, seguro, remuneracaoCapitalSocial, rendimentoPoupanca, resultadoLiquido, cetAnual, 
+                    custoTotal: custoTotalEmprestimo, valorTotalPago, planoAmortizacao
+                });
+            } catch(error) {
+                console.error("Ocorreu um erro durante a simulação:", error);
+                mostrarMensagem("❌ Erro inesperado. Verifique o console.", "warning");
+            }
+        }
+
+        // === Funções de UI e Exibição ===
+        function toggleAdvancedSettings() {
+            const settings = document.getElementById('advancedSettings');
+            const toggle = document.querySelector('.advanced-toggle span');
+            if (settings.style.display === 'none') {
+                settings.style.display = 'block';
+                toggle.innerHTML = '&#9652;'; // Seta para cima
+            } else {
+                settings.style.display = 'none';
+                toggle.innerHTML = '&#9662;'; // Seta para baixo
+            }
+        }
+
+        function toggleAgentRate() {
+            const agentGroup = document.getElementById('agentRateGroup');
+            const isDirect = document.getElementById('direta').checked;
+            agentGroup.style.display = isDirect ? 'none' : 'block';
+        }
+
+        function exibirResultados(dados) {
+            document.getElementById("resultados").style.display = "block";
+            document.getElementById("resultados").scrollIntoView({ behavior: 'smooth' });
+            const resultadoPrincipal = document.getElementById("resultado-principal");
+            const descricaoAdicional = `Este valor de rentabilidade é referente ao período de ${dados.mesesFinanciamento} meses e acompanha a taxa SELIC atual (${(dados.taxaSelicAtual).toFixed(2).replace('.',',')}% a.a.) do dia da simulação.`;
+
+            if (dados.resultadoLiquido > 0) {
+                resultadoPrincipal.querySelector("#resultado-icon").textContent = "🎉";
+                resultadoPrincipal.querySelector("#resultado-titulo").textContent = "Excelente Negócio!";
+                resultadoPrincipal.querySelector("#resultado-valor").textContent = `+${formatarMoeda(dados.resultadoLiquido)}`;
+                resultadoPrincipal.querySelector("#resultado-descricao").innerHTML = `Você terá lucro líquido investindo no capital social! <br>${descricaoAdicional}`;
+                resultadoPrincipal.style.background = "linear-gradient(135deg, #00A294, #7DB61C)";
+            } else if (dados.resultadoLiquido > -100) {
+                resultadoPrincipal.querySelector("#resultado-icon").textContent = "⚖️";
+                resultadoPrincipal.querySelector("#resultado-titulo").textContent = "Resultado Equilibrado";
+                resultadoPrincipal.querySelector("#resultado-valor").textContent = formatarMoeda(dados.resultadoLiquido);
+                resultadoPrincipal.querySelector("#resultado-descricao").innerHTML = `O investimento quase cobre os custos do empréstimo. <br>${descricaoAdicional}`;
+                resultadoPrincipal.style.background = "linear-gradient(135deg, #FFC107, #FF9800)";
+            } else {
+                resultadoPrincipal.querySelector("#resultado-icon").textContent = "⚠️";
+                resultadoPrincipal.querySelector("#resultado-titulo").textContent = "Atenção!";
+                resultadoPrincipal.querySelector("#resultado-valor").textContent = formatarMoeda(dados.resultadoLiquido);
+                resultadoPrincipal.querySelector("#resultado-descricao").innerHTML = `A remuneração não cobrirá os custos do empréstimo. <br>${descricaoAdicional}`;
+                resultadoPrincipal.style.background = "linear-gradient(135deg, #f44336, #d32f2f)";
+            }
+            exibirComparativo(dados);
+            exibirResumoComparativo(dados);
+            exibirGrafico(dados);
+            exibirGraficoAmortizacao(dados.planoAmortizacao);
+            exibirParcelas(dados.planoAmortizacao);
+            configurarBotoesPartilha(dados);
+        }
+
+        function exibirComparativo(dados) {
+            document.getElementById("comparativo").innerHTML = `
+                <div class="comparison-card"><div class="comparison-icon">💸</div><div class="comparison-title">Custo Total do Empréstimo</div><div class="comparison-value">${formatarMoeda(dados.custoTotal)}</div></div>
+                <div class="comparison-card"><div class="comparison-icon">💰</div><div class="comparison-title">Remuneração do Capital Social</div><div class="comparison-value">${formatarMoeda(dados.remuneracaoCapitalSocial)}</div></div>
+                <div class="comparison-card"><div class="comparison-icon">🏦</div><div class="comparison-title">Rendimento na Poupança</div><div class="comparison-value">${formatarMoeda(dados.rendimentoPoupanca)}</div></div>
+                <div class="comparison-card"><div class="comparison-icon">📊</div><div class="comparison-title">CET (Custo Efetivo Total) Anual</div><div class="comparison-value">${formatarPorcentagem(dados.cetAnual)}</div></div>`;
+        }
+
+        function exibirResumoComparativo(dados) {
+            const summaryDiv = document.getElementById("summary-comparison");
+            let message = "";
+            let typeClass = "";
+            const infoPrazoSelic = `A rentabilidade do capital social é calculada para o prazo de ${dados.mesesFinanciamento} meses e acompanha a taxa SELIC atual (${(dados.taxaSelicAtual).toFixed(2).replace('.', ',')}% a.a.) do dia da simulação. Os resultados podem sofrer alterações conforme a volatilidade da SELIC.`;
+            const infoCetNominal = `O Custo Efetivo Total (CET) reflete o custo real do seu empréstimo, incluindo juros, IOF e seguros. Devido à forma como o IOF e os seguros são calculados (proporcionais ao prazo, mas não sempre exponencialmente como os juros), o CET pode ser diferente da taxa nominal anual do empréstimo. O CET é a taxa que realmente importa para comparar o custo total do crédito.`;
+            
+            if (dados.resultadoLiquido > 0) {
+                message = `🎉 **Excelente!** O investimento no capital social pode gerar um lucro líquido de ${formatarMoeda(dados.resultadoLiquido)} ao final do período, superando os custos do seu empréstimo. ${infoPrazoSelic} <br><br> ${infoCetNominal}`;
+                typeClass = "positive";
+            } else if (dados.resultadoLiquido > -100) {
+                message = `⚖️ **Equilibrado.** O custo do seu empréstimo e a remuneração do capital social são muito próximos, resultando numa diferença de ${formatarMoeda(dados.resultadoLiquido)}. Considere os benefícios não financeiros de ser um cooperado. ${infoPrazoSelic} <br><br> ${infoCetNominal}`;
+                typeClass = "neutral";
+            } else {
+                message = `⚠️ **Atenção!** O custo total do seu empréstimo é superior à remuneração do capital social, resultando em um custo líquido de ${formatarMoeda(Math.abs(dados.resultadoLiquido))}. Avalie bem esta opção. ${infoPrazoSelic} <br><br> ${infoCetNominal}`;
+                typeClass = "negative";
+            }
+            summaryDiv.innerHTML = message;
+            summaryDiv.className = `summary-section ${typeClass}`;
+        }
+
+        function exibirGrafico(dados) {
+            const canvas = document.getElementById("grafico");
+            if (window.meuGrafico) window.meuGrafico.destroy();
+            window.meuGrafico = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: ['💸 Custo Total', '💰 Remuneração', '🏦 Poupança'],
+                    datasets: [{ data: [dados.custoTotal, dados.remuneracaoCapitalSocial, dados.rendimentoPoupanca], backgroundColor: ['#49479D', '#00A294', '#7DB61C'] }]
+                },
+                options: { responsive: true, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => formatarMoeda(c.raw) } } },
+                    scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatarMoeda(v) } } }
+                }
+            });
+        }
+
+        function exibirGraficoAmortizacao(plano) {
+            const canvas = document.getElementById("grafico-amortizacao");
+            if (window.meuGraficoAmortizacao) window.meuGraficoAmortizacao.destroy();
+            window.meuGraficoAmortizacao = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: plano.map(p => `Mês ${p.parcela}`),
+                    datasets: [
+                        { label: 'Juros', data: plano.map(p => p.juros), borderColor: '#49479D', tension: 0.1, fill: true, backgroundColor: 'rgba(73, 71, 157, 0.2)' },
+                        { label: 'Amortização', data: plano.map(p => p.amortizacao), borderColor: '#00A294', tension: 0.1, fill: true, backgroundColor: 'rgba(0, 162, 148, 0.2)' },
+                        { label: 'Saldo Devedor', data: plano.map(p => p.saldoDevedor), borderColor: '#7DB61C', tension: 0.1 }
+                    ]
+                },
+                options: { responsive: true, plugins: { tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${formatarMoeda(c.raw)}` } } },
+                    scales: { y: { beginAtZero: true, ticks: { callback: (v) => formatarMoeda(v) } } }
+                }
+            });
+        }
+
+        function exibirParcelas(plano) {
+            const grid = document.getElementById("parcelas-grid");
+            grid.innerHTML = '';
+            plano.forEach(p => {
+                grid.innerHTML += `<tr><td>${p.parcela}</td><td>${formatarMoeda(p.valorParcela)}</td><td>${formatarMoeda(p.juros)}</td><td>${formatarMoeda(p.amortizacao)}</td><td>${formatarMoeda(p.saldoDevedor)}</td></tr>`;
+            });
+        }
+
+        function configurarBotoesPartilha(dados) {
+            const message = `Simulação Procapcred (SAC):\n- Valor: ${formatarMoeda(dados.valorFinanciado)}\n- Prazo: ${dados.mesesFinanciamento} meses\n- Lucro Líquido: ${formatarMoeda(dados.resultadoLiquido)}\n- CET Anual: ${formatarPorcentagem(dados.cetAnual)}`;
+            document.getElementById('share-whatsapp').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+            document.getElementById('share-email').href = `mailto:?subject=Simulação Procapcred&body=${encodeURIComponent(message)}`;
+        }
+
+        function mostrarMensagem(mensagem, tipo = 'info') {
+            let box = document.getElementById('message-box');
+            if (!box) {
+                box = document.createElement('div');
+                box.id = 'message-box';
+                document.body.appendChild(box);
+            }
+            box.textContent = mensagem;
+            box.style.backgroundColor = tipo === 'warning' ? '#FF9800' : '#4CAF50';
+            box.style.opacity = '1';
+            box.style.transform = 'translate(-50%, 0)';
+            setTimeout(() => {
+                box.style.opacity = '0';
+                box.style.transform = 'translate(-50%, -20px)';
+                setTimeout(() => { if(box.parentElement) box.parentElement.removeChild(box); }, 500);
+            }, 3000);
+        }
+        
+        // === INICIALIZAÇÃO DA PÁGINA ===
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnPj = document.getElementById('btn-pj');
+            const btnPf = document.getElementById('btn-pf');
+
+            btnPj.addEventListener('click', () => {
+                tipoCliente = 'PJ';
+                btnPj.classList.add('active');
+                btnPf.classList.remove('active');
+            });
+
+            btnPf.addEventListener('click', () => {
+                tipoCliente = 'PF';
+                btnPf.classList.add('active');
+                btnPj.classList.remove('active');
+            });
+            
+            toggleAgentRate();
+            buscarTaxaSelic();
+        });
+    </script>
 </body>
 </html>
