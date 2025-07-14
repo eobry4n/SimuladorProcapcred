@@ -793,10 +793,38 @@
         }
 
         function configurarBotoesPartilha(dados) {
-            const message = `Simulação Procapcred (SAC):\n- Valor: ${formatarMoeda(dados.valorFinanciado)}\n- Prazo: ${dados.mesesFinanciamento} meses\n- Lucro Líquido: ${formatarMoeda(dados.resultadoLiquido)}\n- CET Anual: ${formatarPorcentagem(dados.cetAnual)}`;
-            document.getElementById('share-whatsapp').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-            document.getElementById('share-email').href = `mailto:?subject=Simulação Procapcred&body=${encodeURIComponent(message)}`;
-        }
+    // Monta a mensagem com uma estrutura clara e emojis
+    let message = `*📊 Simulação Procapcred - Sicoob Unicidades*\n\n`;
+    message += `Olá! Confira o resumo da simulação que realizei:\n\n`;
+    
+    message += `💰 *Valor do Empréstimo:* ${formatarMoeda(dados.valorFinanciado)}\n`;
+    message += `🗓️ *Prazo:* ${dados.mesesFinanciamento} meses\n\n`;
+    
+    message += `*Detalhes do Resultado:*\n`;
+    message += `✅ *Remuneração do Capital (SELIC):* +${formatarMoeda(dados.remuneracaoCapitalSocial)}\n`;
+    message += `🔻 *Custo Total do Empréstimo:* -${formatarMoeda(dados.custoTotal)}\n\n`;
+    
+    // Adapta a mensagem se o resultado for positivo ou negativo
+    if (dados.resultadoLiquido > 0) {
+        message += `✨ *Resultado Líquido (Lucro):* *${formatarMoeda(dados.resultadoLiquido)}*\n\n`;
+    } else {
+        message += `⚠️ *Resultado Líquido (Custo):* *${formatarMoeda(dados.resultadoLiquido)}*\n\n`;
+    }
+    
+    message += `🔍 *CET Anual da Operação:* ${formatarPorcentagem(dados.cetAnual)}\n\n`;
+    
+    message += `_Esta é apenas uma simulação. Valores e taxas podem sofrer alterações. Consulte seu gerente para mais detalhes._`;
+
+    // Configura o link do WhatsApp com a mensagem formatada
+    const whatsappLink = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    document.getElementById('share-whatsapp').href = whatsappLink;
+
+    // Configura o link de E-mail (remove a formatação de negrito/itálico para texto puro)
+    const emailSubject = 'Resultado da Simulação Procapcred - Sicoob';
+    const emailBody = message.replace(/\*/g, '').replace(/_/g, ''); // Remove a formatação Markdown
+    const emailLink = `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    document.getElementById('share-email').href = emailLink;
+}
 
         function mostrarMensagem(mensagem, tipo = 'info') {
             let box = document.getElementById('message-box');
